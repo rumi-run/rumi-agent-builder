@@ -107,7 +107,7 @@ async function sendOtpEmail(email, code) {
     await t.sendMail({
       from: settings.smtp.from,
       to: email,
-      subject: `Your RUMI.run sign-in code ${code}`,
+      subject: 'Your sign-in code for RUMI Agent Builder',
       text,
       html,
       headers: {
