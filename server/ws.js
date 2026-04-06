@@ -9,7 +9,11 @@ const rooms = new Map();
 const blockLocks = new Map();
 
 function setupWebSocket(server) {
-  const wss = new WebSocketServer({ server, path: '/ws/collab' });
+  const wss = new WebSocketServer({
+    server,
+    path: '/ws/collab',
+    maxPayload: 512 * 1024,
+  });
 
   wss.on('connection', async (ws, req) => {
     const cookieHeader = req.headers.cookie || '';
@@ -74,9 +78,11 @@ function setupWebSocket(server) {
 
     // Handle messages
     ws.on('message', (raw) => {
+      const buf = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+      if (buf.length > 512 * 1024) return;
       let msg;
       try {
-        msg = JSON.parse(raw.toString());
+        msg = JSON.parse(buf.toString('utf8'));
       } catch {
         return;
       }

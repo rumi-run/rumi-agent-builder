@@ -3,9 +3,10 @@ const router = express.Router();
 const authService = require('../services/authService');
 const emailService = require('../services/emailService');
 const { requireAuth, isSuperAdminEmail } = require('../middleware');
+const { otpRequestLimiter, otpVerifyLimiter } = require('../middleware/rateLimiters');
 
 // Request OTP
-router.post('/request-code', async (req, res) => {
+router.post('/request-code', otpRequestLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email || !email.includes('@')) {
@@ -38,7 +39,7 @@ router.post('/request-code', async (req, res) => {
 });
 
 // Verify OTP
-router.post('/verify-code', async (req, res) => {
+router.post('/verify-code', otpVerifyLimiter, async (req, res) => {
   try {
     const { email, code } = req.body;
     if (!email || !code) {

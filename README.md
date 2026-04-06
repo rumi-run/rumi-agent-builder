@@ -370,6 +370,13 @@ Connect with `?buildId=<id>`. Cookie session required.
 3. `NODE_ENV=production npm run start` (or your process manager).
 4. Terminate TLS upstream; reverse-proxy `/builder/`, `/api/builder/`, and `/ws/collab` to the app port.
 
+### Security notes (production)
+
+- Set **`BUILDER_TRUST_PROXY=1`** in `.env` when Node runs behind a reverse proxy so **`X-Forwarded-For`** is honored for OTP **rate limits** and logging.
+- OTP **request** and **verify** routes use per-IP limits (see `server/middleware/rateLimiters.js`). Adjust windows if your traffic pattern requires it.
+- **`helmet`** is enabled with CSP disabled for SPA compatibility; add stricter headers at the proxy if you need them.
+- The optional **external auth bridge** does not grant `admin` from the remote `/me` body. Only addresses in **`RUMI_ADMIN_EMAILS`** / **`RUMI_SUPERADMIN_EMAILS`** receive admin.
+
 ### Nginx (example)
 
 ```nginx
@@ -397,6 +404,7 @@ location /ws/collab {
 BUILDER_PORT=3020
 BUILDER_HOST=0.0.0.0
 BUILDER_DB_PATH=./data/builder.db
+BUILDER_TRUST_PROXY=1
 NODE_ENV=production
 RUMI_SMTP_HOST=smtp.mail.me.com
 RUMI_SMTP_PORT=587

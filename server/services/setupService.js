@@ -46,8 +46,12 @@ function computeNeedsSetup() {
   };
 }
 
-/** Exposed for GET /setup/status: current path, whether file exists, and copy for the UI. */
-function getDatabaseInfo() {
+/**
+ * Exposed for GET /setup/status. When includeAbsolutePath is false (setup already complete),
+ * do not leak server filesystem paths to unauthenticated clients.
+ */
+function getDatabaseInfo(options = {}) {
+  const includeAbsolutePath = Boolean(options.includeAbsolutePath);
   const rel = String(settings.dbPath || './data/builder.db').trim();
   const abs = path.isAbsolute(rel) ? rel : path.resolve(PROJECT_ROOT, rel);
   let fileExists = false;
@@ -56,14 +60,17 @@ function getDatabaseInfo() {
   } catch (_) {
     /* ignore */
   }
-  return {
+  const out = {
     envRelativePath: rel,
-    resolvedAbsolutePath: abs,
     fileExists,
     schemaInitializedOnServerStart: true,
     hint:
       'The SQLite database file and tables are created when the server process starts (before you use this wizard). You do not run a separate database installer. To store data somewhere else, set BUILDER_DB_PATH in the form (writes .env) and restart the server so it opens that file.',
   };
+  if (includeAbsolutePath) {
+    out.resolvedAbsolutePath = abs;
+  }
+  return out;
 }
 
 function getExpectedToken() {

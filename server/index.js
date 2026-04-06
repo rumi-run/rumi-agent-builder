@@ -1,6 +1,7 @@
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const helmet = require('helmet');
 const path = require('path');
 const { initDb } = require('./db');
 const settings = require('./config/settings');
@@ -19,6 +20,17 @@ const { setupWebSocket } = require('./ws');
 const { ensureSetupTokenOnDisk } = require('./services/setupService');
 
 const app = express();
+
+if (process.env.BUILDER_TRUST_PROXY === '1') {
+  app.set('trust proxy', 1);
+}
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
 // Middleware
 app.use(cors({

@@ -19,7 +19,7 @@ router.get('/status', (req, res) => {
       smtpConfigured: s.smtpConfigured,
       adminConfigured: s.adminConfigured,
       aiConfigSecretConfigured: !!settings.ai.configSecretConfigured,
-      database: getDatabaseInfo(),
+      database: getDatabaseInfo({ includeAbsolutePath: s.needsSetup }),
       checklist: s.checklist,
       setupPath: '/builder/setup',
       hint:

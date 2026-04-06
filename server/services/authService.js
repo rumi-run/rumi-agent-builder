@@ -148,7 +148,8 @@ async function ensureLocalUserFromExternalAuth(remoteUser) {
   const email = String(remoteUser.email).toLowerCase().trim();
   const isConfiguredAdmin =
     settings.auth.adminEmails.includes(email) || settings.auth.superAdminEmails.includes(email);
-  const effectiveRole = isConfiguredAdmin ? 'admin' : (remoteUser.role || 'user');
+  /** Never trust the bridge /me payload for privileged roles; only env allowlists grant admin. */
+  const effectiveRole = isConfiguredAdmin ? 'admin' : 'user';
 
   let local = await db.getAsync(`SELECT * FROM rumi_users WHERE email = ?`, [email]);
 

@@ -192,7 +192,7 @@ export default function SetupPage() {
                 <p className="text-xs font-medium text-sky-100">Database (SQLite)</p>
                 <p className="text-[11px] text-sky-100/85 leading-relaxed">{databaseInfo.hint}</p>
                 <p className="text-[10px] font-mono text-gray-400 break-all">
-                  Path: {databaseInfo.resolvedAbsolutePath}
+                  Path: {databaseInfo.resolvedAbsolutePath || databaseInfo.envRelativePath}
                 </p>
                 <p className="text-[10px] text-gray-500">
                   File on disk: {databaseInfo.fileExists ? 'yes (schema applied on server start)' : 'not yet (empty DB will appear after first start)'}
