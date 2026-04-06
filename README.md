@@ -147,6 +147,7 @@ Copy [`.env.example`](./.env.example) to `.env` and adjust.
 | Variable | Purpose |
 |----------|---------|
 | `BUILDER_PORT`, `BUILDER_HOST`, `BUILDER_DB_PATH` | HTTP bind address and SQLite file path |
+| `BUILDER_TRUST_PROXY` | Set `1` behind a reverse proxy so rate limits and `req.ip` use the real client |
 | `NODE_ENV` | `production` enables stricter cookie and AI key handling |
 | `RUMI_SMTP_*`, `RUMI_EMAIL_FROM` | Outbound mail for OTP |
 | `RUMI_ADMIN_EMAILS`, `RUMI_SUPERADMIN_EMAILS` | Admin and super-admin email lists |
