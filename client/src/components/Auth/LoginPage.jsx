@@ -132,18 +132,33 @@ export default function LoginPage() {
                 Enter the 4-digit code sent to
               </p>
               <p className="text-th-primary text-sm font-medium mb-2">{email}</p>
-              <p className="text-gray-500 text-xs mb-3 leading-relaxed">
-                If you do not see the email within 1–2 minutes, check your <strong>Junk</strong> or{' '}
-                <strong>Spam</strong> folder. If it landed there, mark the sender as <strong>Not spam</strong> to
-                improve future delivery.
+              <p className="text-gray-400 text-sm mb-4 leading-relaxed">
+                If you do not see the email within a minute or two, check your <strong className="text-gray-200">Junk</strong> or{' '}
+                <strong className="text-gray-200">Spam</strong> folder. If it landed there, mark the sender as{' '}
+                <strong className="text-gray-200">Not spam</strong> to improve future delivery.
               </p>
 
               {loginNotice ? (
                 <div
-                  className="mb-4 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2.5 text-xs leading-relaxed text-sky-100/95 whitespace-pre-line"
+                  className="mb-5 flex gap-3 rounded-xl border border-amber-400/45 bg-gradient-to-br from-amber-950/95 to-slate-950/90 px-4 py-4 shadow-lg shadow-black/30 ring-1 ring-amber-300/15"
                   role="status"
+                  aria-live="polite"
                 >
-                  {loginNotice}
+                  <span
+                    className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300"
+                    aria-hidden
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </span>
+                  <p className="min-w-0 text-sm font-medium leading-relaxed text-amber-50 [text-shadow:0_1px_2px_rgba(0,0,0,0.35)] whitespace-pre-line">
+                    {loginNotice}
+                  </p>
                 </div>
               ) : null}
 
@@ -183,10 +198,6 @@ export default function LoginPage() {
             </div>
           )}
         </div>
-
-        <p className="text-gray-600 text-xs text-center mt-6">
-          By continuing, you agree to RUMI's terms of service
-        </p>
       </div>
     </div>
   );
