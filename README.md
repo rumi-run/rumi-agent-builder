@@ -23,11 +23,13 @@
 | Area | What you get |
 |------|----------------|
 | **Canvas** | Drag-and-drop graph, 13 agent block types, undo/redo, auto-save, keyboard shortcuts |
-| **AI assist** | Generate or refine instructions, validate structure, suggest missing blocks (admin-configured provider) |
+| **AI assist** | Generate or refine instructions, validate structure, suggest blocks, agent intro copy (admin-configured provider and model) |
 | **Collaboration** | WebSocket presence, cursors, shared canvas updates, comments on blocks |
 | **Access control** | Email OTP sessions, share links (view/edit), organization membership and invites |
 | **Export** | Printable HTML, JSON, presentation mode for walkthroughs |
 | **Operations** | Express API, SQLite persistence, health endpoint, optional SSO alignment via hosting setup |
+| **Admin** | AI provider settings, user list, usage, optional community template approvals (super admin) |
+| **Self-hosted setup** | Initial wizard at `/builder/setup` for SMTP, admin emails, optional encryption secret (writes `.env`) |
 
 ---
 
@@ -35,9 +37,9 @@
 
 - **Client:** React, Vite, Tailwind, React Flow-style canvas, Zustand stores, collaboration hooks.
 - **Server:** Node.js, Express, SQLite (schema + migrations), WebSocket server for real-time sessions.
-- **Auth:** Email OTP and cookie sessions; production stacks often pair with the broader RUMI SSO and reverse proxy rules documented in the host repo.
+- **Auth:** Email OTP and cookie sessions. The same codebase can use **builder-local auth** (`/api/builder/auth`) or, on the hosted stack, a reverse proxy to **unified auth** (`VITE_AUTH_API_BASE=/api/rumi-auth` at build time).
 
-For a full file tree and module map, see **Repository layout** below.
+For a full file tree, see **Repository layout** below.
 
 ---
 
@@ -51,15 +53,23 @@ npm install
 cd client && npm install && cd ..
 
 cp .env.example .env
-# Edit .env, or use the in-app wizard (see "First-time configuration" below).
+# Edit .env, or use the in-app wizard (see First-time configuration).
 
 npm run dev
 ```
 
-- **Client (dev):** `http://localhost:5173/builder/`
-- **API health:** `http://localhost:3020/api/builder/health`
+| URL | Purpose |
+|-----|---------|
+| `http://localhost:5173/builder/` | Client (Vite dev server; proxies `/api/builder` to the app) |
+| `http://localhost:3020/api/builder/health` | API health |
 
-Use `npm run start` after a production build for a single Node process serving the app per your `.env`.
+**Scripts**
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Runs Vite and Express together (`concurrently`) |
+| `npm run build` | Builds the client to `client/dist` |
+| `npm run start` | Single Node process: API + static files from `client/dist` when `NODE_ENV=production` |
 
 ---
 
@@ -73,14 +83,46 @@ Sign-in is **email one-time password (OTP)**. The server must send mail, and you
 |------|-----|
 | **SMTP** | Delivers OTP messages (`RUMI_SMTP_HOST`, `RUMI_SMTP_USER`, `RUMI_SMTP_PASS`, port, `RUMI_EMAIL_FROM`) |
 | **Admin emails** | Comma-separated list (`RUMI_ADMIN_EMAILS`). The first login using one of these addresses gets the **admin** role. |
-| **Optional** | `RUMI_SUPERADMIN_EMAILS` (template approvals; defaults to admin list if empty), `RUMI_AI_CONFIG_SECRET` (encrypts admin AI API keys at rest in production). You can paste a value or use **Generate and save** in initial setup or Admin Settings (writes `.env`, no need to copy the secret). |
+| **Optional** | `RUMI_SUPERADMIN_EMAILS` (template approvals; defaults to admin list if empty). `RUMI_AI_CONFIG_SECRET` encrypts the **stored** admin AI API key in the database. Paste a value in `.env`, or use **Generate and save** in initial setup or Admin Settings (writes `.env`; the secret is not shown in the browser). |
 
-**Two ways to configure**
+**Ways to configure**
 
-1. **Edit `.env`** before or after deploy, then start the server (see example block under [Deployment](#deployment)).
-2. **In-app initial setup** (when SMTP or admin emails are still missing): open **`/builder/setup`**. The server prints a **one-time setup token** on first start (or use `RUMI_SETUP_TOKEN` / the contents of `data/.setup_token`). The form saves values into the project **`.env`** file and applies them in the running process so you can continue to sign in without an extra restart in most cases.
+1. **Edit `.env`** before or after deploy, then start the server (see [Deployment](#deployment)).
+2. **Initial setup UI** when SMTP or admin emails are missing: open **`/builder/setup`**. The server prints a **one-time setup token** on first start (or use `RUMI_SETUP_TOKEN` / `data/.setup_token`). The form merges values into **`.env`** and reloads settings in the running process.
 
-Hosted **rumi.run** builds the client with unified auth (`VITE_AUTH_API_BASE=/api/rumi-auth`). For a **standalone** clone, the default client points at **`/api/builder/auth`** on the same host, which matches this repository’s Express routes.
+**Client auth base URL**
+
+| Deployment | Build-time variable | Typical value |
+|------------|--------------------|---------------|
+| Standalone (this repo + Express) | Default | `/api/builder/auth` |
+| Hosted RUMI stack (unified auth) | `VITE_AUTH_API_BASE` | `/api/rumi-auth` |
+
+The [deploy script](https://github.com/rumi-run/rumi_run_home) in `rumi_run_home` sets `VITE_AUTH_API_BASE=/api/rumi-auth` when building for production.
+
+---
+
+## Environment variables
+
+Copy [`.env.example`](./.env.example) to `.env` and adjust. Common keys:
+
+| Variable | Purpose |
+|----------|---------|
+| `BUILDER_PORT`, `BUILDER_HOST`, `BUILDER_DB_PATH` | HTTP bind and SQLite path |
+| `NODE_ENV` | `production` enables secure cookies and stricter AI key rules |
+| `RUMI_SMTP_*`, `RUMI_EMAIL_FROM` | Outbound mail for OTP |
+| `RUMI_ADMIN_EMAILS`, `RUMI_SUPERADMIN_EMAILS` | Admin and super-admin email lists |
+| `RUMI_AI_CONFIG_SECRET` | Derives encryption key for **stored** AI API keys (not the provider key itself) |
+| `RUMI_SETUP_TOKEN` | Optional fixed token for `/builder/setup` instead of `data/.setup_token` |
+| `RUMI_SSO_INTERNAL_URL`, `RUMI_SSO_COOKIE_NAME` | Optional alignment with rumi-unified-auth when deployed behind the same stack |
+
+---
+
+## AI configuration (admin)
+
+Admins configure **provider**, **API endpoint**, **API key**, **default model**, and rate limits in **Admin Settings** (backed by the `ai_config` table). Supported provider modes in code include **Anthropic-style** (`anthropic`, `apimart`), **OpenAI** (`openai`), and **custom** endpoints with a compatible JSON body.
+
+- **`RUMI_AI_CONFIG_SECRET`:** Used only to encrypt the admin-supplied API key at rest. It is **not** your model vendor secret. Generate it in Admin Settings or initial setup, or set it manually in `.env`.
+- **Production:** Saving a non-empty API key typically requires `RUMI_AI_CONFIG_SECRET` to be set so keys are not stored in plaintext.
 
 ---
 
@@ -90,9 +132,9 @@ Hosted **rumi.run** builds the client with unified auth (`VITE_AUTH_API_BASE=/ap
 rumi-agent-builder/
 ├── client/                     # React + Vite + Tailwind
 │   └── src/
-│       ├── App.jsx             # Routes (login, dashboard, canvas, org, admin, shared)
+│       ├── App.jsx             # Routes (login, setup, dashboard, canvas, org, admin, shared)
 │       ├── components/
-│       │   ├── Auth/           # Login (email OTP)
+│       │   ├── Auth/           # Login (OTP), initial setup wizard
 │       │   ├── Blocks/         # Agent block nodes
 │       │   ├── Canvas/         # Canvas, toolbar, edges, shortcuts
 │       │   ├── Collaboration/  # Sharing, orgs, presence, comments, shared view
@@ -110,8 +152,8 @@ rumi-agent-builder/
 │   ├── middleware.js           # Auth guards
 │   ├── ws.js                   # Real-time collaboration
 │   ├── config/settings.js
-│   ├── routes/                 # auth, agents, sharing, orgs, comments, ai, admin
-│   └── services/               # Auth, email (SMTP)
+│   ├── routes/                 # auth, agents, sharing, orgs, comments, ai, admin, setup, communityTemplates
+│   └── services/               # Auth, email (SMTP), setup (.env merge)
 ├── package.json
 └── .env.example
 ```
@@ -139,7 +181,7 @@ rumi-agent-builder/
 
 ## HTTP API overview
 
-Base paths are mounted under `/api/builder/` in a typical deployment. Representative routes:
+Base path: **`/api/builder/`**. The tables below list representative routes; see `server/routes/` for the full set.
 
 ### Authentication (`/api/builder/auth`)
 
@@ -148,6 +190,7 @@ Base paths are mounted under `/api/builder/` in a typical deployment. Representa
 | POST | `/request-code` | No | Send OTP to email |
 | POST | `/verify-code` | No | Verify OTP, create session |
 | GET | `/me` | Yes | Current user |
+| GET | `/capabilities` | Yes | Admin / super-admin flags for the UI |
 | POST | `/logout` | Yes | End session |
 | PUT | `/profile` | Yes | Update profile |
 
@@ -161,6 +204,10 @@ Base paths are mounted under `/api/builder/` in a typical deployment. Representa
 | PUT | `/:id` | Yes | Update |
 | DELETE | `/:id` | Yes | Delete |
 | POST | `/:id/duplicate` | Yes | Duplicate |
+| GET | `/:id/activity` | Yes | Activity log |
+| GET | `/:id/versions` | Yes | Version list |
+| POST | `/:id/versions/:versionId/restore` | Yes | Restore version |
+| GET | `/:id/access` | Yes | Access summary |
 
 ### Sharing (`/api/builder/sharing`)
 
@@ -203,25 +250,37 @@ Base paths are mounted under `/api/builder/` in a typical deployment. Representa
 | POST | `/generate-instructions` | Yes | Generate instructions |
 | POST | `/validate-structure` | Yes | Validate agent structure |
 | POST | `/suggest-blocks` | Yes | Suggest blocks |
+| POST | `/generate-agent-intro` | Yes | Generate title / description for an agent |
+
+### Community templates (`/api/builder/community-templates`)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/public` | No | Public gallery entries |
+| POST | `/submit` | Yes | Submit a build for gallery review |
+| GET | `/status/:buildId` | Yes | Submission status for a build |
 
 ### Admin (`/api/builder/admin`)
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/ai-config` | Admin | AI config |
+| GET | `/ai-config` | Admin | AI config (includes whether `RUMI_AI_CONFIG_SECRET` is set) |
 | PUT | `/ai-config` | Admin | Update AI config |
-| GET | `/users` | Admin | Users |
-| GET | `/usage` | Admin | Usage stats |
 | POST | `/generate-ai-config-secret` | Admin | Generate `RUMI_AI_CONFIG_SECRET` and write `.env` if not already set |
+| GET | `/users` | Admin | Users (paginated) |
+| GET | `/usage` | Admin | Usage stats |
+| GET | `/template-submissions` | Super admin | Pending template submissions |
+| POST | `/template-submissions/:id/approve` | Super admin | Approve submission |
+| POST | `/template-submissions/:id/reject` | Super admin | Reject submission |
 
 ### Initial setup (`/api/builder/setup`)
 
-Used when SMTP or `RUMI_ADMIN_EMAILS` is not yet configured. Saves to the server `.env` and requires a setup token (server log, `data/.setup_token`, or `RUMI_SETUP_TOKEN`).
+Used when SMTP or `RUMI_ADMIN_EMAILS` is not yet configured. Persists to `.env` and requires a setup token (server log, `data/.setup_token`, or `RUMI_SETUP_TOKEN`).
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/status` | No | Whether core setup is still required |
-| POST | `/apply` | Setup token (`X-Setup-Token` or `token` in JSON) | Write SMTP, admin emails, optional AI secret |
+| GET | `/status` | No | Whether core setup is required; includes `aiConfigSecretConfigured` |
+| POST | `/apply` | Setup token | Write SMTP, admin emails, optional AI secret |
 | POST | `/generate-ai-secret` | Setup token | Generate `RUMI_AI_CONFIG_SECRET` and append to `.env` |
 
 ### WebSocket (`/ws/collab`)
@@ -262,9 +321,14 @@ Connect with `?buildId=<id>`. Cookie-based auth.
 
 **Hosted RUMI stack:** production deploy for rumi.run is automated from [`rumi_run_home`](https://github.com/rumi-run/rumi_run_home) using `scripts/deploy_rumi_agent_builder.sh` (systemd, Nginx, and server-side build steps live there).
 
-**Self-hosted:** set `.env`, install dependencies, run `npm run build` for the client, then `npm run start` from the project root. Use a process manager and TLS in front of the app in production.
+**Self-hosted**
 
-### Nginx (WebSocket example)
+1. Configure `.env` (or complete `/builder/setup`).
+2. `npm install` at the repo root; `cd client && npm install && npm run build`.
+3. `NODE_ENV=production npm run start` from the repo root (or use a process manager).
+4. Terminate TLS and reverse-proxy `/builder/`, `/api/builder/`, and `/ws/collab` to the Node port.
+
+### Nginx (example)
 
 ```nginx
 location /builder/ {
@@ -302,35 +366,9 @@ RUMI_ADMIN_EMAILS=admin@rumi.run,your@email.com
 
 ---
 
-## Roadmap
-
-### Shipped in tree
-
-- OTP email auth and long-lived sessions
-- Initial setup UI at `/builder/setup` (SMTP + admin emails, optional AI secret) with `.env` persistence
-- Admin AI API keys encrypted at rest when `RUMI_AI_CONFIG_SECRET` is set
-- Full canvas with 13 block types, undo/redo, auto-save, shortcuts
-- Export to HTML and JSON, presentation mode
-- AI drafting, validation, and block suggestions (admin-configured)
-- Admin: AI config, users, usage
-- Templates gallery, sharing, organizations
-- Real-time collaboration and block comments
-
-### Next up
-
-- Enforced rate limits
-- Version history UI (data model exists)
-- Canvas JSON import
-- Deeper sub-agent linking
-- Agent deployment targets
-- Knowledge block file upload
-- Agent execution runtime
-
----
-
 ## Contributing
 
-Issues and pull requests are welcome. Please keep security-sensitive values out of Git; use `.env` locally and never commit secrets.
+Issues and pull requests are welcome. Keep security-sensitive values out of Git: use `.env` locally and never commit secrets.
 
 For changes that also affect the hosted RUMI monorepo (deploy scripts, SSO snippets), coordinate with [`rumi_run_home`](https://github.com/rumi-run/rumi_run_home).
 
