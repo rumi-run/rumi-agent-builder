@@ -2,6 +2,7 @@ const express = require('express');
 const settings = require('../config/settings');
 const {
   computeNeedsSetup,
+  getDatabaseInfo,
   verifySetupToken,
   applySetup,
   writeEnvUpdates,
@@ -18,6 +19,7 @@ router.get('/status', (req, res) => {
       smtpConfigured: s.smtpConfigured,
       adminConfigured: s.adminConfigured,
       aiConfigSecretConfigured: !!settings.ai.configSecretConfigured,
+      database: getDatabaseInfo(),
       checklist: s.checklist,
       setupPath: '/builder/setup',
       hint:

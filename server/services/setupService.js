@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { reloadSettingsFromEnv } = require('../config/settings');
+const settings = require('../config/settings');
 const { resetTransporter } = require('./emailService');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
@@ -28,6 +28,11 @@ function computeNeedsSetup() {
     adminConfigured: adminOk,
     checklist: [
       {
+        id: 'database',
+        ok: true,
+        label: 'SQLite file and tables (created when the server starts; see Database below)',
+      },
+      {
         id: 'smtp',
         ok: smtpOk,
         label: 'SMTP (host and user; password required for most providers)',
@@ -38,6 +43,26 @@ function computeNeedsSetup() {
         label: 'At least one admin email (sign-in gets admin role for these addresses)',
       },
     ],
+  };
+}
+
+/** Exposed for GET /setup/status: current path, whether file exists, and copy for the UI. */
+function getDatabaseInfo() {
+  const rel = String(settings.dbPath || './data/builder.db').trim();
+  const abs = path.isAbsolute(rel) ? rel : path.resolve(PROJECT_ROOT, rel);
+  let fileExists = false;
+  try {
+    fileExists = fs.existsSync(abs);
+  } catch (_) {
+    /* ignore */
+  }
+  return {
+    envRelativePath: rel,
+    resolvedAbsolutePath: abs,
+    fileExists,
+    schemaInitializedOnServerStart: true,
+    hint:
+      'The SQLite database file and tables are created when the server process starts (before you use this wizard). You do not run a separate database installer. To store data somewhere else, set BUILDER_DB_PATH in the form (writes .env) and restart the server so it opens that file.',
   };
 }
 
@@ -133,7 +158,7 @@ function writeEnvUpdates(updates) {
     }
   });
 
-  reloadSettingsFromEnv();
+  settings.reloadSettingsFromEnv();
   resetTransporter();
 }
 
@@ -151,11 +176,17 @@ function validateSetupPayload(body) {
   const adminEmails = parseAdminList(body.adminEmails);
   const superAdminEmails = parseAdminList(body.superAdminEmails || '');
   const aiConfigSecret = String(body.aiConfigSecret || '').trim();
+  const dbPathRaw = String(body.dbPath ?? '').trim();
 
   const errors = [];
   if (!smtpHost) errors.push('SMTP host is required.');
   if (!smtpUser) errors.push('SMTP user is required.');
   if (!adminEmails.length) errors.push('At least one admin email is required.');
+
+  let dbPath = dbPathRaw || './data/builder.db';
+  if (dbPath.length > 512 || /[\r\n]/.test(dbPath)) {
+    errors.push('Invalid database path.');
+  }
 
   return {
     ok: errors.length === 0,
@@ -169,6 +200,7 @@ function validateSetupPayload(body) {
       adminEmails,
       superAdminEmails,
       aiConfigSecret,
+      dbPath,
     },
   };
 }
@@ -190,6 +222,7 @@ function buildEnvMapFromValues(v) {
   if (v.aiConfigSecret) {
     map.RUMI_AI_CONFIG_SECRET = v.aiConfigSecret;
   }
+  map.BUILDER_DB_PATH = v.dbPath;
   return map;
 }
 
@@ -234,16 +267,31 @@ function applySetup(body) {
     throw err;
   }
 
+  function normDb(p) {
+    const s = String(p || '').trim();
+    return s || './data/builder.db';
+  }
+  const prevDb = normDb(process.env.BUILDER_DB_PATH);
   const envMap = buildEnvMapFromValues(parsed.values);
+  const newDb = normDb(parsed.values.dbPath);
+  const dbPathChanged = newDb !== prevDb;
+
   writeEnvUpdates(envMap);
   removeSetupTokenFile();
 
   console.log('[Setup] Core settings saved to .env. SMTP and admin lists are active in this process.');
-  return { ok: true, needsSetup: false };
+  const out = { ok: true, needsSetup: false };
+  if (dbPathChanged) {
+    out.restartRequired = true;
+    out.restartHint =
+      'BUILDER_DB_PATH was updated in .env. Restart the server so the app connects to the new SQLite file (initDb will create tables there on startup).';
+  }
+  return out;
 }
 
 module.exports = {
   computeNeedsSetup,
+  getDatabaseInfo,
   ensureSetupTokenOnDisk,
   getExpectedToken,
   verifySetupToken,

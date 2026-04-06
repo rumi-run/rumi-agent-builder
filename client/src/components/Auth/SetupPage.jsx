@@ -21,6 +21,9 @@ export default function SetupPage() {
   const [aiConfigSecret, setAiConfigSecret] = useState('');
   const [aiConfigSecretConfigured, setAiConfigSecretConfigured] = useState(false);
   const [aiSecretBusy, setAiSecretBusy] = useState(false);
+  const [databaseInfo, setDatabaseInfo] = useState(null);
+  const [dbPath, setDbPath] = useState('./data/builder.db');
+  const [setupResult, setSetupResult] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,6 +34,10 @@ export default function SetupPage() {
         setNeedsSetup(!!s.needsSetup);
         setChecklist(s.checklist || []);
         setAiConfigSecretConfigured(!!s.aiConfigSecretConfigured);
+        if (s.database) {
+          setDatabaseInfo(s.database);
+          setDbPath(s.database.envRelativePath || './data/builder.db');
+        }
       } catch (e) {
         if (!cancelled) setError(e.message || 'Could not load setup status');
       } finally {
@@ -47,7 +54,7 @@ export default function SetupPage() {
     setError('');
     setSaving(true);
     try {
-      await setupApi.apply(
+      const result = await setupApi.apply(
         {
           token: token.trim(),
           smtpHost: smtpHost.trim(),
@@ -58,9 +65,11 @@ export default function SetupPage() {
           adminEmails: adminEmails.trim(),
           superAdminEmails: superAdminEmails.trim(),
           aiConfigSecret: aiConfigSecret.trim(),
+          dbPath: dbPath.trim(),
         },
         token.trim()
       );
+      setSetupResult(result || null);
       setSuccess(true);
       setNeedsSetup(false);
     } catch (err) {
@@ -141,12 +150,26 @@ export default function SetupPage() {
         </div>
 
         {success ? (
-          <div className="rumi-glass p-8 text-center">
-            <p className="text-th-primary font-medium mb-2">Settings saved to the server .env file.</p>
-            <p className="text-gray-400 text-sm mb-6">
-              You can sign in with an address listed under Admin emails. If the server runs behind a process
-              manager, restart it so every worker picks up the file (this Node process already reloaded values).
-            </p>
+          <div className="rumi-glass p-8 text-center space-y-4">
+            <p className="text-th-primary font-medium">Settings saved to the server .env file.</p>
+            {setupResult?.restartRequired ? (
+              <div
+                className="text-left rounded-lg border border-amber-400/40 bg-amber-950/35 px-4 py-3 text-sm text-amber-50/95"
+                role="status"
+              >
+                <p className="font-medium text-amber-100 mb-1">Restart required</p>
+                <p className="text-amber-50/90 leading-relaxed">
+                  {setupResult.restartHint ||
+                    'Restart the Node process so it uses the new BUILDER_DB_PATH and runs migrations on that file.'}
+                </p>
+              </div>
+            ) : (
+              <p className="text-gray-400 text-sm">
+                You can sign in with an address listed under Admin emails. If the server runs behind a process
+                manager, restart it so every worker picks up the file (this Node process already reloaded most
+                values).
+              </p>
+            )}
             <Link to="/login" className="rumi-btn-primary inline-block px-6 py-2.5 rounded-lg">
               Continue to sign in
             </Link>
@@ -163,6 +186,36 @@ export default function SetupPage() {
                 ))}
               </ul>
             )}
+
+            {databaseInfo ? (
+              <div className="rounded-lg border border-sky-400/30 bg-sky-950/25 p-4 space-y-2 text-left">
+                <p className="text-xs font-medium text-sky-100">Database (SQLite)</p>
+                <p className="text-[11px] text-sky-100/85 leading-relaxed">{databaseInfo.hint}</p>
+                <p className="text-[10px] font-mono text-gray-400 break-all">
+                  Path: {databaseInfo.resolvedAbsolutePath}
+                </p>
+                <p className="text-[10px] text-gray-500">
+                  File on disk: {databaseInfo.fileExists ? 'yes (schema applied on server start)' : 'not yet (empty DB will appear after first start)'}
+                </p>
+                <div>
+                  <label className="rumi-label" htmlFor="db-path">
+                    BUILDER_DB_PATH (optional)
+                  </label>
+                  <input
+                    id="db-path"
+                    className="rumi-input font-mono text-xs"
+                    autoComplete="off"
+                    placeholder="./data/builder.db"
+                    value={dbPath}
+                    onChange={(e) => setDbPath(e.target.value)}
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Change only if you need a different file location. After saving, restart the server so the new
+                    path is used.
+                  </p>
+                </div>
+              </div>
+            ) : null}
 
             <div>
               <label className="rumi-label" htmlFor="setup-token">

@@ -104,11 +104,13 @@ Sign-in uses **email one-time codes (OTP)**. The server must send mail, and you 
 |------|------|
 | `RUMI_SUPERADMIN_EMAILS` | Approves public gallery submissions; if empty, admin list is used where relevant |
 | `RUMI_AI_CONFIG_SECRET` | Encrypts the **stored** platform AI API key in the database (not your vendor key). Set in `.env`, or use **Generate and save** in initial setup or Admin Settings (written to `.env`; not displayed in the browser). |
+| `BUILDER_DB_PATH` | SQLite file path (default `./data/builder.db`). The file and tables are **created when the server starts**, not by a separate installer. You can set or change this in **`/builder/setup`**; if you change it, **restart** the server so the app opens the new file. |
 
 **How to configure**
 
-1. Edit `.env` and start the server, or follow [Deployment](#deployment).
-2. If SMTP or admin emails are missing, open **`/builder/setup`**. On first boot the server emits a **setup token** (or set `RUMI_SETUP_TOKEN` / read `data/.setup_token`). The wizard merges values into `.env` and reloads settings in the running process.
+1. **Start the server once** so SQLite is initialized (`initDb` runs on startup). You can open **`/builder/setup`** after that.
+2. Edit `.env` and start the server, or follow [Deployment](#deployment).
+3. If SMTP or admin emails are missing, open **`/builder/setup`**. On first boot the server emits a **setup token** (or set `RUMI_SETUP_TOKEN` / read `data/.setup_token`). The wizard merges values into `.env`, shows the current database path, and can write `BUILDER_DB_PATH` if you need a different file.
 
 **Where the browser sends login requests (`VITE_AUTH_API_BASE`)**
 
@@ -199,6 +201,8 @@ rumi-agent-builder/
 ---
 
 ## Database (SQLite)
+
+The app uses a **single SQLite file** (default `./data/builder.db`, overridable with `BUILDER_DB_PATH`). The parent directory is created if needed. **All tables are created automatically** when the server process runs `initDb()` on startup. There is no separate migration command for a normal install. The initial setup UI explains this and can persist an alternate `BUILDER_DB_PATH` to `.env` (restart required to switch files).
 
 | Table | Purpose |
 |-------|---------|
