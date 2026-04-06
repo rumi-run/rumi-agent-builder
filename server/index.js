@@ -14,7 +14,9 @@ const sharingRoutes = require('./routes/sharing');
 const orgRoutes = require('./routes/orgs');
 const commentRoutes = require('./routes/comments');
 const communityTemplatesRoutes = require('./routes/communityTemplates');
+const setupRoutes = require('./routes/setup');
 const { setupWebSocket } = require('./ws');
+const { ensureSetupTokenOnDisk } = require('./services/setupService');
 
 const app = express();
 
@@ -37,6 +39,7 @@ app.use('/api/builder/sharing', sharingRoutes);
 app.use('/api/builder/orgs', orgRoutes);
 app.use('/api/builder/comments', commentRoutes);
 app.use('/api/builder/community-templates', communityTemplatesRoutes);
+app.use('/api/builder/setup', setupRoutes);
 
 // Health check
 app.get('/api/builder/health', (req, res) => {
@@ -61,6 +64,8 @@ async function start() {
   try {
     await initDb();
     console.log('[DB] Database initialized');
+
+    ensureSetupTokenOnDisk();
 
     const server = http.createServer(app);
     setupWebSocket(server);

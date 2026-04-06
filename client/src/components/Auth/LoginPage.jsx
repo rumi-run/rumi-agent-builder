@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../../stores/authStore';
+import { setupApi } from '../../utils/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { user, error, requestCode, verifyCode, clearError } = useAuthStore();
+  const [setupNeeded, setSetupNeeded] = useState(false);
   const [email, setEmail] = useState('');
   const [step, setStep] = useState('email'); // 'email' | 'otp'
   const [otp, setOtp] = useState(['', '', '', '']);
@@ -16,6 +18,21 @@ export default function LoginPage() {
   useEffect(() => {
     if (user) navigate('/', { replace: true });
   }, [user, navigate]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await setupApi.status();
+        if (!cancelled && s.needsSetup) setSetupNeeded(true);
+      } catch {
+        if (!cancelled) setSetupNeeded(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
@@ -94,6 +111,36 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="rumi-glass p-8">
+          {setupNeeded ? (
+            <div
+              className="mb-6 flex gap-3 rounded-xl border border-amber-400/40 bg-amber-950/40 px-4 py-4 text-left"
+              role="status"
+            >
+              <span className="mt-0.5 text-amber-300 shrink-0" aria-hidden>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </span>
+              <div className="min-w-0 text-sm text-amber-50/95 leading-relaxed">
+                <p className="font-medium text-amber-100 mb-1">Server needs SMTP and admin emails</p>
+                <p className="text-amber-50/85 mb-3">
+                  Sign-in sends a one-time code by email. The operator must configure mail delivery and admin
+                  addresses before users can receive codes.
+                </p>
+                <Link
+                  to="/setup"
+                  className="inline-flex items-center justify-center rounded-lg bg-amber-500/25 px-4 py-2 text-sm font-medium text-amber-100 ring-1 ring-amber-400/30 hover:bg-amber-500/35 transition-colors min-h-[44px]"
+                >
+                  Open initial setup
+                </Link>
+              </div>
+            </div>
+          ) : null}
+
           {step === 'email' ? (
             <form onSubmit={handleEmailSubmit}>
               <label className="rumi-label" htmlFor="login-email">

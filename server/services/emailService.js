@@ -4,6 +4,10 @@ const settings = require('../config/settings');
 
 let transporter = null;
 
+function resetTransporter() {
+  transporter = null;
+}
+
 function getTransporter() {
   if (transporter) return transporter;
   const { host, port, user, pass } = settings.smtp;
@@ -42,9 +46,9 @@ async function sendOtpEmail(email, code) {
     '',
     'You are receiving this because a sign-in was requested for this email address on RUMI Agent Builder (rumi.run).',
     '',
-    'If you did not request this code, no action is needed — your account is secure.',
+    'If you did not request this code, no action is needed. Your account stays secure.',
     '',
-    '— RUMI Agent Builder',
+    'RUMI Agent Builder',
     'https://rumi.run/builder',
   ].join('\n');
 
@@ -123,4 +127,4 @@ async function sendOtpEmail(email, code) {
   }
 }
 
-module.exports = { sendOtpEmail };
+module.exports = { sendOtpEmail, resetTransporter };

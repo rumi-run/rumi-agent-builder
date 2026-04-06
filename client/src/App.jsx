@@ -4,6 +4,7 @@ import useAuthStore from './stores/authStore';
 import useThemeStore from './stores/themeStore';
 import AppLayout from './components/Layout/AppLayout';
 import LoginPage from './components/Auth/LoginPage';
+import SetupPage from './components/Auth/SetupPage';
 import Dashboard from './components/Dashboard/Dashboard';
 import CanvasPage from './components/Canvas/CanvasPage';
 import AdminPanel from './components/Layout/AdminPanel';
@@ -69,6 +70,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/setup" element={<SetupPage />} />
       <Route path="/shared/:token" element={<SharedView />} />
       <Route
         path="/"

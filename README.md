@@ -51,7 +51,7 @@ npm install
 cd client && npm install && cd ..
 
 cp .env.example .env
-# Edit .env: SMTP and admin emails are required for OTP mail delivery in production-like setups.
+# Edit .env, or use the in-app wizard (see "First-time configuration" below).
 
 npm run dev
 ```
@@ -60,6 +60,27 @@ npm run dev
 - **API health:** `http://localhost:3020/api/builder/health`
 
 Use `npm run start` after a production build for a single Node process serving the app per your `.env`.
+
+---
+
+## First-time configuration (self-hosted)
+
+Sign-in is **email one-time password (OTP)**. The server must send mail, and you must declare which addresses are **admins** before those users sign in (role is assigned on first account creation).
+
+**What you need**
+
+| Item | Why |
+|------|-----|
+| **SMTP** | Delivers OTP messages (`RUMI_SMTP_HOST`, `RUMI_SMTP_USER`, `RUMI_SMTP_PASS`, port, `RUMI_EMAIL_FROM`) |
+| **Admin emails** | Comma-separated list (`RUMI_ADMIN_EMAILS`). The first login using one of these addresses gets the **admin** role. |
+| **Optional** | `RUMI_SUPERADMIN_EMAILS` (template approvals; defaults to admin list if empty), `RUMI_AI_CONFIG_SECRET` (encrypts admin AI API keys at rest in production) |
+
+**Two ways to configure**
+
+1. **Edit `.env`** before or after deploy, then start the server (see example block under [Deployment](#deployment)).
+2. **In-app initial setup** (when SMTP or admin emails are still missing): open **`/builder/setup`**. The server prints a **one-time setup token** on first start (or use `RUMI_SETUP_TOKEN` / the contents of `data/.setup_token`). The form saves values into the project **`.env`** file and applies them in the running process so you can continue to sign in without an extra restart in most cases.
+
+Hosted **rumi.run** builds the client with unified auth (`VITE_AUTH_API_BASE=/api/rumi-auth`). For a **standalone** clone, the default client points at **`/api/builder/auth`** on the same host, which matches this repository’s Express routes.
 
 ---
 
@@ -192,6 +213,15 @@ Base paths are mounted under `/api/builder/` in a typical deployment. Representa
 | GET | `/users` | Admin | Users |
 | GET | `/usage` | Admin | Usage stats |
 
+### Initial setup (`/api/builder/setup`)
+
+Used when SMTP or `RUMI_ADMIN_EMAILS` is not yet configured. Saves to the server `.env` and requires a setup token (server log, `data/.setup_token`, or `RUMI_SETUP_TOKEN`).
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/status` | No | Whether core setup is still required |
+| POST | `/apply` | Setup token (`X-Setup-Token` or `token` in JSON) | Write SMTP, admin emails, optional AI secret |
+
 ### WebSocket (`/ws/collab`)
 
 Connect with `?buildId=<id>`. Cookie-based auth.
@@ -275,6 +305,7 @@ RUMI_ADMIN_EMAILS=admin@rumi.run,your@email.com
 ### Shipped in tree
 
 - OTP email auth and long-lived sessions
+- Initial setup UI at `/builder/setup` (SMTP + admin emails, optional AI secret) with `.env` persistence
 - Admin AI API keys encrypted at rest when `RUMI_AI_CONFIG_SECRET` is set
 - Full canvas with 13 block types, undo/redo, auto-save, shortcuts
 - Export to HTML and JSON, presentation mode

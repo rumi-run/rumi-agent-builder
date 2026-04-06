@@ -1,6 +1,9 @@
 const API_BASE = '/api/builder';
 
-/** Unified auth (rumi-unified-auth via Nginx /api/rumi-auth/) */
+/** Self-hosted: `/api/builder/auth`. Hosted RUMI stack: set `VITE_AUTH_API_BASE=/api/rumi-auth` at build time. */
+const AUTH_API_BASE = import.meta.env.VITE_AUTH_API_BASE || '/api/builder/auth';
+
+/** Builder auth or unified auth (rumi-unified-auth via Nginx /api/rumi-auth/) */
 async function authRequest(path, options = {}) {
   const { method = 'GET', body, headers = {} } = options;
   const config = {
@@ -14,7 +17,7 @@ async function authRequest(path, options = {}) {
   };
   if (body) config.body = JSON.stringify(body);
 
-  const res = await fetch(`/api/rumi-auth${path}`, config);
+  const res = await fetch(`${AUTH_API_BASE}${path}`, config);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error(data.error || `Request failed: ${res.status}`);
@@ -132,6 +135,17 @@ export const commentApi = {
 // Builder session capabilities (same cookie as agent API; complements rumi-auth /me)
 export const builderAuthApi = {
   capabilities: () => request('/auth/capabilities'),
+};
+
+/** Initial deployment: SMTP + admin emails (writes server `.env`; requires setup token). */
+export const setupApi = {
+  status: () => request('/setup/status'),
+  apply: (body, setupToken) =>
+    request('/setup/apply', {
+      method: 'POST',
+      body,
+      headers: setupToken ? { 'X-Setup-Token': setupToken } : {},
+    }),
 };
 
 // Community / system template submissions
