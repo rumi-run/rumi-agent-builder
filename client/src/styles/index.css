@@ -4,6 +4,7 @@
 
 /* ========== Theme CSS Variables ========== */
 :root {
+  color-scheme: dark;
   /* Dark theme (default) */
   --rumi-dark: #0a0e1a;
   --rumi-shell: #111827;
@@ -11,7 +12,9 @@
   --rumi-border: #2a3041;
   --rumi-accent: #0ea5e9;
   --rumi-accent-hover: #38bdf8;
-  --rumi-canvas: #f8fafc;
+  /* Canvas: dark by default (matches builder shell; light mode overrides below) */
+  --rumi-canvas: #0f1419;
+  --rumi-canvas-dots: #475569;
 
   /* Semantic text colors */
   --text-primary: #f9fafb;
@@ -35,6 +38,7 @@
 
 /* Light theme */
 :root.light {
+  color-scheme: light;
   --rumi-dark: #f8fafc;
   --rumi-shell: #ffffff;
   --rumi-sidebar: #f1f5f9;
@@ -42,6 +46,7 @@
   --rumi-accent: #0284c7;
   --rumi-accent-hover: #0369a1;
   --rumi-canvas: #f8fafc;
+  --rumi-canvas-dots: #cbd5e1;
 
   --text-primary: #0f172a;
   --text-secondary: #334155;
@@ -205,7 +210,7 @@
 :root.light .bg-gray-600\/20 { background: rgba(71, 85, 105, 0.12) !important; }
 
 /* ========== Dark mode contrast improvements ========== */
-/* text-gray-600 is too faint on dark backgrounds — bump to readable level */
+/* text-gray-600 is too faint on dark backgrounds: bump to readable level */
 :root:not(.light) .text-gray-600 { color: #9ca3af !important; }
 :root:not(.light) .text-gray-700 { color: #6b7280 !important; }
 

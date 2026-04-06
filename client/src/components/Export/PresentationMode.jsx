@@ -264,7 +264,7 @@ export default function PresentationMode({ onClose }) {
                 variant={BackgroundVariant.Dots}
                 gap={20}
                 size={1}
-                color="#cbd5e1"
+                color="var(--rumi-canvas-dots)"
               />
             </ReactFlow>
           </div>

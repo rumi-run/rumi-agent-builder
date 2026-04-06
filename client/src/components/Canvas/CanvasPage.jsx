@@ -462,7 +462,7 @@ export default function CanvasPage() {
               variant={BackgroundVariant.Dots}
               gap={20}
               size={1}
-              color="#cbd5e1"
+              color="var(--rumi-canvas-dots)"
             />
             <AlignmentGuides />
             <Controls showInteractive={false} />
