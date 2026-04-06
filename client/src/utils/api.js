@@ -15,8 +15,12 @@ async function authRequest(path, options = {}) {
   if (body) config.body = JSON.stringify(body);
 
   const res = await fetch(`/api/rumi-auth${path}`, config);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Request failed: ${res.status}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.error || `Request failed: ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 
@@ -33,8 +37,12 @@ async function request(path, options = {}) {
   if (body) config.body = JSON.stringify(body);
 
   const res = await fetch(`${API_BASE}${path}`, config);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Request failed: ${res.status}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.error || `Request failed: ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 
@@ -119,4 +127,24 @@ export const commentApi = {
   resolve: (commentId, resolved) =>
     request(`/comments/${commentId}/resolve`, { method: 'PUT', body: { resolved } }),
   delete: (commentId) => request(`/comments/${commentId}`, { method: 'DELETE' }),
+};
+
+// Builder session capabilities (same cookie as agent API; complements rumi-auth /me)
+export const builderAuthApi = {
+  capabilities: () => request('/auth/capabilities'),
+};
+
+// Community / system template submissions
+export const communityTemplatesApi = {
+  getPublic: () => request('/community-templates/public'),
+  submit: (body) => request('/community-templates/submit', { method: 'POST', body }),
+  getStatus: (buildId) => request(`/community-templates/status/${buildId}`),
+};
+
+export const adminTemplateApi = {
+  listSubmissions: (status = 'pending') =>
+    request(`/admin/template-submissions?status=${encodeURIComponent(status)}`),
+  approve: (id) => request(`/admin/template-submissions/${id}/approve`, { method: 'POST' }),
+  reject: (id, reason) =>
+    request(`/admin/template-submissions/${id}/reject`, { method: 'POST', body: { reason } }),
 };

@@ -1,8 +1,9 @@
 import { create } from 'zustand';
-import { authApi } from '../utils/api';
+import { authApi, builderAuthApi } from '../utils/api';
 
 const useAuthStore = create((set, get) => ({
   user: null,
+  capabilities: null,
   loading: true,
   error: null,
 
@@ -10,9 +11,26 @@ const useAuthStore = create((set, get) => ({
     try {
       set({ loading: true, error: null });
       const data = await authApi.me();
-      set({ user: data.user, loading: false });
+      set({ user: data.user });
+      try {
+        const cap = await builderAuthApi.capabilities();
+        set({
+          capabilities: {
+            isAdmin: !!cap.isAdmin,
+            isSuperAdmin: !!cap.isSuperAdmin,
+          },
+        });
+      } catch {
+        set({
+          capabilities: {
+            isAdmin: data.user?.role === 'admin',
+            isSuperAdmin: false,
+          },
+        });
+      }
+      set({ loading: false });
     } catch {
-      set({ user: null, loading: false });
+      set({ user: null, capabilities: null, loading: false });
     }
   },
 
@@ -41,6 +59,22 @@ const useAuthStore = create((set, get) => ({
       set({ error: null });
       const data = await authApi.verifyCode(email, code);
       set({ user: data.user });
+      try {
+        const cap = await builderAuthApi.capabilities();
+        set({
+          capabilities: {
+            isAdmin: !!cap.isAdmin,
+            isSuperAdmin: !!cap.isSuperAdmin,
+          },
+        });
+      } catch {
+        set({
+          capabilities: {
+            isAdmin: data.user?.role === 'admin',
+            isSuperAdmin: false,
+          },
+        });
+      }
       return true;
     } catch (err) {
       set({ error: err.message });
@@ -54,7 +88,7 @@ const useAuthStore = create((set, get) => ({
     } catch {
       // ignore
     }
-    set({ user: null });
+    set({ user: null, capabilities: null });
   },
 
   updateProfile: async (data) => {

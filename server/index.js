@@ -13,6 +13,7 @@ const aiRoutes = require('./routes/ai');
 const sharingRoutes = require('./routes/sharing');
 const orgRoutes = require('./routes/orgs');
 const commentRoutes = require('./routes/comments');
+const communityTemplatesRoutes = require('./routes/communityTemplates');
 const { setupWebSocket } = require('./ws');
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/builder/ai', aiRoutes);
 app.use('/api/builder/sharing', sharingRoutes);
 app.use('/api/builder/orgs', orgRoutes);
 app.use('/api/builder/comments', commentRoutes);
+app.use('/api/builder/community-templates', communityTemplatesRoutes);
 
 // Health check
 app.get('/api/builder/health', (req, res) => {

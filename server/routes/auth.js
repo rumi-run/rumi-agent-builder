@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authService = require('../services/authService');
 const emailService = require('../services/emailService');
-const { requireAuth } = require('../middleware');
+const { requireAuth, isSuperAdminEmail } = require('../middleware');
 
 // Request OTP
 router.post('/request-code', async (req, res) => {
@@ -93,6 +93,14 @@ router.get('/me', requireAuth, (req, res) => {
       role: req.user.role,
       org: req.user.org,
     },
+  });
+});
+
+// Builder capabilities (for UI: super admin template approvals, etc.)
+router.get('/capabilities', requireAuth, (req, res) => {
+  res.json({
+    isAdmin: req.user.role === 'admin',
+    isSuperAdmin: isSuperAdminEmail(req.user.email),
   });
 });
 

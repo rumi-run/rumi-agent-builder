@@ -69,7 +69,10 @@ async function getOrCreateUser(email) {
 
   if (!user) {
     const id = generateUserId();
-    const role = settings.auth.adminEmails.includes(lowerEmail) ? 'admin' : 'user';
+    const isAdmin =
+      settings.auth.adminEmails.includes(lowerEmail) ||
+      settings.auth.superAdminEmails.includes(lowerEmail);
+    const role = isAdmin ? 'admin' : 'user';
     await db.runAsync(
       `INSERT INTO rumi_users (id, email, role) VALUES (?, ?, ?)`,
       [id, lowerEmail, role]
@@ -143,7 +146,8 @@ async function updateUserProfile(userId, data) {
 async function ensureLocalUserFromSso(ssoUser) {
   if (!ssoUser || !ssoUser.email) return null;
   const email = String(ssoUser.email).toLowerCase().trim();
-  const isConfiguredAdmin = settings.auth.adminEmails.includes(email);
+  const isConfiguredAdmin =
+    settings.auth.adminEmails.includes(email) || settings.auth.superAdminEmails.includes(email);
   // 本地 admin 白名单优先，避免 SSO 角色同步延迟导致管理入口消失
   const effectiveRole = isConfiguredAdmin ? 'admin' : (ssoUser.role || 'user');
 

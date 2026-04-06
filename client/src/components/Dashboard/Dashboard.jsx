@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { agentApi, sharingApi } from '../../utils/api';
+import { userFacingError } from '../../utils/userFacingError';
 import useAuthStore from '../../stores/authStore';
 import TemplatesGallery from './TemplatesGallery';
 import OrgSidebar from '../Collaboration/OrgSidebar';
@@ -17,31 +18,29 @@ export default function Dashboard() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [sharedAgents, setSharedAgents] = useState([]);
   const [accessPopover, setAccessPopover] = useState(null); // buildId
+  const [listError, setListError] = useState(null);
 
-  useEffect(() => {
-    loadAgents();
-    loadSharedAgents();
-  }, []);
-
-  const loadSharedAgents = async () => {
+  const loadDashboardLists = async () => {
+    setListError(null);
+    setLoading(true);
     try {
-      const data = await sharingApi.sharedWithMe();
-      setSharedAgents(data.agents || []);
+      const [own, shared] = await Promise.all([
+        agentApi.list(),
+        sharingApi.sharedWithMe(),
+      ]);
+      setAgents(own.agents || []);
+      setSharedAgents(shared.agents || []);
     } catch (err) {
-      // Not critical, ignore
-    }
-  };
-
-  const loadAgents = async () => {
-    try {
-      const data = await agentApi.list();
-      setAgents(data.agents || []);
-    } catch (err) {
-      console.error('Failed to load agents:', err);
+      console.error('Failed to load dashboard lists:', err);
+      setListError(userFacingError(err));
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadDashboardLists();
+  }, []);
 
   const handleCreate = async () => {
     setCreating(true);
@@ -104,21 +103,38 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="max-w-6xl mx-auto px-6 py-8">
+    <div className="h-full min-h-0 overflow-y-auto overscroll-y-contain">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        {listError && (
+          <div
+            className="mb-6 rounded-xl border border-red-500/35 bg-red-950/40 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+            role="alert"
+          >
+            <p className="text-sm text-red-100/95">{listError}</p>
+            <button
+              type="button"
+              onClick={() => loadDashboardLists()}
+              className="shrink-0 rumi-btn-secondary text-xs py-2 min-h-[44px] sm:min-h-0"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold text-th-primary">My Agents</h1>
             <p className="text-gray-500 text-sm mt-1">
               {agents.length} agent build{agents.length !== 1 ? 's' : ''}
               {sharedAgents.length > 0 && ` · ${sharedAgents.length} shared with you`}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
             <button
+              type="button"
               onClick={() => setShowTemplates(true)}
-              className="rumi-btn-secondary flex items-center gap-2"
+              className="rumi-btn-secondary flex items-center justify-center gap-2 min-h-[44px] sm:min-h-0"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
@@ -126,9 +142,10 @@ export default function Dashboard() {
               Templates
             </button>
             <button
+              type="button"
               onClick={handleCreate}
               disabled={creating}
-              className="rumi-btn-primary flex items-center gap-2"
+              className="rumi-btn-primary flex items-center justify-center gap-2 min-h-[44px] sm:min-h-0"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -184,11 +201,20 @@ export default function Dashboard() {
               Start building your first AI agent. Drag and drop blocks to design
               the architecture, then export or share with your team.
             </p>
-            <div className="flex items-center gap-3 justify-center">
-              <button onClick={() => setShowTemplates(true)} className="rumi-btn-secondary">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-center max-w-sm mx-auto">
+              <button
+                type="button"
+                onClick={() => setShowTemplates(true)}
+                className="rumi-btn-secondary min-h-[44px] sm:min-h-0"
+              >
                 Start from Template
               </button>
-              <button onClick={handleCreate} disabled={creating} className="rumi-btn-primary">
+              <button
+                type="button"
+                onClick={handleCreate}
+                disabled={creating}
+                className="rumi-btn-primary min-h-[44px] sm:min-h-0"
+              >
                 Blank Canvas
               </button>
             </div>
@@ -221,12 +247,14 @@ export default function Dashboard() {
                         {/* Collaboration icon for shared agents */}
                         {isShared && (
                           <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setAccessPopover(accessPopover === agent.id ? null : agent.id);
                             }}
-                            className="shrink-0 w-5 h-5 rounded flex items-center justify-center text-blue-400 hover:bg-blue-500/10 transition-colors"
+                            className="shrink-0 min-h-9 min-w-9 rounded flex items-center justify-center text-blue-400 hover:bg-blue-500/10 transition-colors"
                             title="Shared with you"
+                            aria-label="Shared access details"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -298,17 +326,19 @@ export default function Dashboard() {
 
                   {/* Actions — only for owned agents */}
                   {!isShared && (
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pt-1">
                       <button
+                        type="button"
                         onClick={(e) => handleDuplicate(agent.id, e)}
-                        className="text-gray-500 hover:text-gray-300 text-xs transition-colors"
+                        className="text-gray-500 hover:text-gray-300 text-xs transition-colors py-2 px-1 -mx-1 sm:py-0 sm:px-1 rounded min-h-[44px] sm:min-h-0 inline-flex items-center"
                       >
                         Duplicate
                       </button>
-                      <span className="text-gray-700">·</span>
+                      <span className="text-gray-700 hidden sm:inline">·</span>
                       <button
+                        type="button"
                         onClick={(e) => handleDelete(agent.id, e)}
-                        className={`text-xs transition-colors ${
+                        className={`text-xs transition-colors py-2 px-1 -mx-1 sm:py-0 sm:px-1 rounded min-h-[44px] sm:min-h-0 inline-flex items-center ${
                           deleteConfirm === agent.id
                             ? 'text-red-400 font-medium'
                             : 'text-gray-500 hover:text-red-400'

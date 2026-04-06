@@ -10,6 +10,7 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { sharingApi } from '../../utils/api';
+import { userFacingError } from '../../utils/userFacingError';
 import { BLOCK_TYPES } from '../../utils/blockTypes';
 import AgentBlockNode from '../Blocks/AgentBlockNode';
 import CustomEdge, { EdgeArrowMarker } from '../Canvas/CustomEdge';
@@ -28,33 +29,41 @@ export default function SharedView() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    loadShared();
-  }, [token]);
+    let cancelled = false;
 
-  const loadShared = async () => {
-    try {
-      const data = await sharingApi.getShared(token);
-      setAgent(data.agent);
-      setPermission(data.permission);
+    const run = async () => {
+      setLoading(true);
+      setError('');
+      setAgent(null);
+      setPermission('view');
 
-      // If the user is logged in and has edit access, redirect to the full canvas editor
-      if (user && data.permission === 'edit' && data.agent?.id) {
-        navigate(`/agent/${data.agent.id}`, { replace: true });
-        return;
+      try {
+        const data = await sharingApi.getShared(token);
+        if (cancelled) return;
+
+        setAgent(data.agent);
+        setPermission(data.permission || 'view');
+
+        if (data.permission === 'edit' && user?.id && data.agent?.id) {
+          navigate(`/agent/${data.agent.id}`, { replace: true });
+          return;
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(userFacingError(err, 'Could not open this shared link.'));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  // If user is authenticated and has edit permission, redirect to full editor
-  useEffect(() => {
-    if (user && permission === 'edit' && agent?.id) {
-      navigate(`/agent/${agent.id}`, { replace: true });
-    }
-  }, [user, permission, agent]);
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, user?.id, navigate]);
 
   if (loading) {
     return (
@@ -70,7 +79,7 @@ export default function SharedView() {
   if (error) {
     return (
       <div className="h-screen flex items-center justify-center bg-rumi-dark">
-        <div className="text-center max-w-sm">
+        <div className="text-center max-w-sm px-4">
           <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -81,6 +90,7 @@ export default function SharedView() {
           <p className="text-gray-500 text-sm">{error}</p>
           {!user && (
             <button
+              type="button"
               onClick={() => navigate('/login')}
               className="rumi-btn-primary mt-4 text-sm"
             >
@@ -103,23 +113,24 @@ export default function SharedView() {
     <div className="h-screen flex flex-col bg-rumi-dark">
       {/* Header bar */}
       <header className="h-12 flex items-center justify-between px-4 border-b border-rumi-border bg-rumi-shell shrink-0 z-50">
-        <div className="flex items-center gap-3">
-          <span className="text-rumi-accent text-sm font-semibold">RUMI</span>
-          <span className="text-gray-500 text-sm">Agent Builder</span>
-          <div className="h-4 w-px bg-rumi-border mx-2" />
-          <span className="text-sm font-medium text-gray-200">{agent?.name}</span>
-          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-rumi-accent text-sm font-semibold shrink-0">RUMI</span>
+          <span className="text-gray-500 text-sm hidden sm:inline">Agent Builder</span>
+          <div className="h-4 w-px bg-rumi-border mx-2 shrink-0" />
+          <span className="text-sm font-medium text-gray-200 truncate">{agent?.name}</span>
+          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 ${
             permission === 'edit' ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-500/10 text-gray-400'
           }`}>
             {permission} access
           </span>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-xs text-gray-500">
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="text-xs text-gray-500 truncate max-w-[40vw] sm:max-w-none">
             Shared by {agent?.owner_name || agent?.owner_email}
           </div>
           {!user && (
             <button
+              type="button"
               onClick={() => navigate('/login')}
               className="rumi-btn-primary text-xs"
             >
@@ -130,7 +141,7 @@ export default function SharedView() {
       </header>
 
       {/* Canvas */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative min-h-0">
         <EdgeArrowMarker />
         <ReactFlow
           nodes={nodes}

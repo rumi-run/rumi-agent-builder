@@ -1,7 +1,22 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const { db } = require('../db');
-const { requireAuth, requireAdmin } = require('../middleware');
+const { requireAuth, requireAdmin, requireSuperAdmin } = require('../middleware');
+const { encryptApiKeyForStorage } = require('../utils/aiKeyCrypto');
+
+function generateId() {
+  return crypto.randomBytes(12).toString('hex');
+}
+
+function slugify(name) {
+  const s = String(name || 'template')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 48);
+  return s || 'template';
+}
 
 router.use(requireAuth);
 router.use(requireAdmin);
@@ -56,7 +71,18 @@ router.put('/ai-config', async (req, res) => {
 
     if (apiProvider !== undefined) { updates.push('api_provider = ?'); values.push(apiProvider); }
     if (apiEndpoint !== undefined) { updates.push('api_endpoint = ?'); values.push(apiEndpoint); }
-    if (apiKey !== undefined) { updates.push('api_key_encrypted = ?'); values.push(apiKey); } // TODO: encrypt
+    if (apiKey !== undefined) {
+      try {
+        const stored = encryptApiKeyForStorage(apiKey);
+        updates.push('api_key_encrypted = ?');
+        values.push(stored);
+      } catch (e) {
+        if (e.code === 'MISSING_AI_CONFIG_SECRET' || e.message?.includes('RUMI_AI_CONFIG_SECRET')) {
+          return res.status(503).json({ error: e.message });
+        }
+        throw e;
+      }
+    }
     if (defaultModel !== undefined) { updates.push('default_model = ?'); values.push(defaultModel); }
     if (rateLimitPerUser !== undefined) { updates.push('rate_limit_per_user = ?'); values.push(rateLimitPerUser); }
     if (rateLimitWindow !== undefined) { updates.push('rate_limit_window = ?'); values.push(rateLimitWindow); }
@@ -147,6 +173,99 @@ router.get('/usage', async (req, res) => {
   } catch (err) {
     console.error('[Admin] Get usage error:', err);
     res.status(500).json({ error: 'Failed to load usage' });
+  }
+});
+
+// --- System template submissions (super admin only) ---
+router.get('/template-submissions', requireSuperAdmin, async (req, res) => {
+  try {
+    const status = (req.query.status || 'pending').trim();
+    if (!['pending', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status filter' });
+    }
+    const rows = await db.allAsync(
+      `SELECT s.*, u.email AS submitter_email, b.name AS build_name
+       FROM template_submissions s
+       JOIN rumi_users u ON u.id = s.submitter_user_id
+       JOIN agent_builds b ON b.id = s.build_id
+       WHERE s.status = ?
+       ORDER BY s.created_at ASC`,
+      [status]
+    );
+    res.json({ submissions: rows });
+  } catch (err) {
+    console.error('[Admin] List template submissions error:', err);
+    res.status(500).json({ error: 'Failed to load submissions' });
+  }
+});
+
+router.post('/template-submissions/:id/approve', requireSuperAdmin, async (req, res) => {
+  try {
+    const sub = await db.getAsync(`SELECT * FROM template_submissions WHERE id = ?`, [req.params.id]);
+    if (!sub || sub.status !== 'pending') {
+      return res.status(400).json({ error: 'Invalid submission or already processed' });
+    }
+
+    let baseSlug = slugify(sub.proposed_name);
+    let slug = baseSlug;
+    let n = 0;
+    // eslint-disable-next-line no-await-in-loop
+    while (await db.getAsync(`SELECT id FROM published_system_templates WHERE slug = ?`, [slug])) {
+      n += 1;
+      slug = `${baseSlug}-${n}`;
+    }
+
+    const pubId = generateId();
+
+    await db.runAsync(
+      `INSERT INTO published_system_templates (
+        id, submission_id, slug, name, description, category, icon, canvas_data,
+        source_build_id, submitted_by_user_id, approved_by_user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        pubId,
+        sub.id,
+        slug,
+        sub.proposed_name,
+        sub.proposed_description || '',
+        sub.proposed_category || 'enterprise',
+        sub.proposed_icon || '📋',
+        sub.canvas_snapshot,
+        sub.build_id,
+        sub.submitter_user_id,
+        req.user.user_id,
+      ]
+    );
+
+    await db.runAsync(
+      `UPDATE template_submissions SET status = 'approved', reviewer_user_id = ?, reviewed_at = datetime('now'), published_public_id = ? WHERE id = ?`,
+      [req.user.user_id, pubId, sub.id]
+    );
+
+    res.json({ ok: true, publishedId: pubId, slug });
+  } catch (err) {
+    console.error('[Admin] Approve template error:', err);
+    res.status(500).json({ error: 'Failed to approve submission' });
+  }
+});
+
+router.post('/template-submissions/:id/reject', requireSuperAdmin, async (req, res) => {
+  try {
+    const { reason = '' } = req.body;
+    const sub = await db.getAsync(`SELECT * FROM template_submissions WHERE id = ?`, [req.params.id]);
+    if (!sub || sub.status !== 'pending') {
+      return res.status(400).json({ error: 'Invalid submission or already processed' });
+    }
+
+    await db.runAsync(
+      `UPDATE template_submissions SET status = 'rejected', reviewer_user_id = ?, reviewed_at = datetime('now'), rejection_reason = ? WHERE id = ?`,
+      [req.user.user_id, String(reason).trim().slice(0, 2000), sub.id]
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[Admin] Reject template error:', err);
+    res.status(500).json({ error: 'Failed to reject submission' });
   }
 });
 

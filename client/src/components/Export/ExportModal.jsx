@@ -240,10 +240,10 @@ export default function ExportModal({ onClose }) {
       const text = textEl.textContent;
       navigator.clipboard.writeText(text).then(function() {
         btn.classList.add('copied');
-        btn.innerHTML = '✓ Copied';
+        btn.textContent = '✓ Copied';
         setTimeout(function() {
           btn.classList.remove('copied');
-          btn.innerHTML = '📋 Copy';
+          btn.textContent = '📋 Copy';
         }, 2000);
       });
     });

@@ -248,7 +248,48 @@ function initDb() {
         created_at DATETIME DEFAULT (datetime('now'))
       )`);
 
-      db.run(`CREATE INDEX IF NOT EXISTS idx_ai_usage_user ON ai_usage_logs(user_id)`, (err) => {
+      db.run(`CREATE INDEX IF NOT EXISTS idx_ai_usage_user ON ai_usage_logs(user_id)`);
+
+      // Community template submissions (require super admin approval)
+      db.run(`CREATE TABLE IF NOT EXISTS template_submissions (
+        id TEXT PRIMARY KEY,
+        build_id TEXT NOT NULL,
+        submitter_user_id TEXT NOT NULL,
+        proposed_name TEXT NOT NULL,
+        proposed_description TEXT DEFAULT '',
+        proposed_category TEXT DEFAULT 'enterprise',
+        proposed_icon TEXT DEFAULT '📋',
+        canvas_snapshot TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        reviewer_user_id TEXT,
+        reviewed_at DATETIME,
+        rejection_reason TEXT,
+        published_public_id TEXT,
+        created_at DATETIME DEFAULT (datetime('now')),
+        FOREIGN KEY (build_id) REFERENCES agent_builds(id) ON DELETE CASCADE,
+        FOREIGN KEY (submitter_user_id) REFERENCES rumi_users(id)
+      )`);
+
+      db.run(`CREATE INDEX IF NOT EXISTS idx_template_sub_build ON template_submissions(build_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_template_sub_status ON template_submissions(status)`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS published_system_templates (
+        id TEXT PRIMARY KEY,
+        submission_id TEXT,
+        slug TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        category TEXT DEFAULT 'enterprise',
+        icon TEXT DEFAULT '📋',
+        canvas_data TEXT NOT NULL,
+        source_build_id TEXT,
+        submitted_by_user_id TEXT,
+        approved_by_user_id TEXT,
+        created_at DATETIME DEFAULT (datetime('now')),
+        FOREIGN KEY (submission_id) REFERENCES template_submissions(id)
+      )`);
+
+      db.run(`CREATE INDEX IF NOT EXISTS idx_pub_templates_slug ON published_system_templates(slug)`, (err) => {
         if (err) reject(err);
         else resolve();
       });

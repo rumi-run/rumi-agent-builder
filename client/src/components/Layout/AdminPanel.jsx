@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { adminApi } from '../../utils/api';
+import { adminApi, adminTemplateApi } from '../../utils/api';
+import useAuthStore from '../../stores/authStore';
 
 export default function AdminPanel() {
+  const { capabilities } = useAuthStore();
+  const isSuperAdmin = !!capabilities?.isSuperAdmin;
   const [aiConfig, setAiConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -22,6 +25,57 @@ export default function AdminPanel() {
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(1);
   const [userPagination, setUserPagination] = useState({ total: 0, totalPages: 0, page: 1, limit: 20 });
+
+  const [tplSubmissions, setTplSubmissions] = useState([]);
+  const [tplLoading, setTplLoading] = useState(false);
+  const [rejectingId, setRejectingId] = useState(null);
+  const [rejectReasonInput, setRejectReasonInput] = useState('');
+  const [tplBusyId, setTplBusyId] = useState(null);
+
+  const loadTemplateSubmissions = useCallback(async () => {
+    if (!isSuperAdmin) return;
+    setTplLoading(true);
+    try {
+      const data = await adminTemplateApi.listSubmissions('pending');
+      setTplSubmissions(data.submissions || []);
+    } catch (err) {
+      console.error('Failed to load template submissions:', err);
+    } finally {
+      setTplLoading(false);
+    }
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
+    loadTemplateSubmissions();
+  }, [loadTemplateSubmissions]);
+
+  const handleApproveTemplate = async (id) => {
+    setTplBusyId(id);
+    try {
+      await adminTemplateApi.approve(id);
+      await loadTemplateSubmissions();
+      setRejectingId(null);
+      setRejectReasonInput('');
+    } catch (err) {
+      console.error('Approve template failed:', err);
+    } finally {
+      setTplBusyId(null);
+    }
+  };
+
+  const handleRejectTemplate = async (id) => {
+    setTplBusyId(id);
+    try {
+      await adminTemplateApi.reject(id, rejectReasonInput);
+      await loadTemplateSubmissions();
+      setRejectingId(null);
+      setRejectReasonInput('');
+    } catch (err) {
+      console.error('Reject template failed:', err);
+    } finally {
+      setTplBusyId(null);
+    }
+  };
 
   const loadUsers = useCallback(async (page = 1, search = userSearch) => {
     setUsersLoading(true);
@@ -81,7 +135,7 @@ export default function AdminPanel() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-3xl mx-auto px-6 py-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-th-primary">Admin Settings</h1>
           <p className="text-gray-500 text-sm mt-1">Configure platform-level AI services and settings</p>
@@ -212,6 +266,120 @@ export default function AdminPanel() {
           </div>
         </div>
 
+        {/* System template review (super admin) */}
+        {isSuperAdmin && (
+          <div className="rumi-card mb-6">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <span className="text-lg" aria-hidden>
+                    📋
+                  </span>
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-th-primary">System template review</h2>
+                  <p className="text-xs text-gray-500">
+                    Approve user submissions before they appear in the template gallery for everyone.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => loadTemplateSubmissions()}
+                className="text-[10px] px-2 py-1 rounded border border-rumi-border text-gray-400 hover:text-th-primary"
+              >
+                Refresh
+              </button>
+            </div>
+
+            {tplLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-rumi-accent border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : tplSubmissions.length === 0 ? (
+              <p className="text-gray-500 text-xs text-center py-6">No pending template submissions</p>
+            ) : (
+              <ul className="space-y-3">
+                {tplSubmissions.map((s) => (
+                  <li
+                    key={s.id}
+                    className="rounded-lg border border-rumi-border bg-rumi-dark/40 p-3 text-xs"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium text-th-primary truncate">{s.proposed_name}</p>
+                        <p className="text-gray-500 mt-0.5">
+                          Agent: {s.build_name || s.build_id}{' '}
+                          <span className="text-gray-600">
+                            · {s.proposed_category || 'enterprise'} · from {s.submitter_email}
+                          </span>
+                        </p>
+                        {s.proposed_description ? (
+                          <p className="text-gray-400 mt-2 line-clamp-3">{s.proposed_description}</p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        {rejectingId === s.id ? (
+                          <div className="flex flex-col items-stretch gap-1 w-full min-w-[200px]">
+                            <textarea
+                              className="rumi-input text-[10px] min-h-[52px]"
+                              placeholder="Reason for rejection (optional)"
+                              value={rejectReasonInput}
+                              onChange={(e) => setRejectReasonInput(e.target.value)}
+                            />
+                            <div className="flex gap-1 justify-end">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRejectingId(null);
+                                  setRejectReasonInput('');
+                                }}
+                                className="px-2 py-1 rounded text-[10px] text-gray-400 hover:text-th-primary"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                disabled={tplBusyId === s.id}
+                                onClick={() => handleRejectTemplate(s.id)}
+                                className="px-2 py-1 rounded text-[10px] bg-red-500/20 text-red-300 border border-red-500/30"
+                              >
+                                {tplBusyId === s.id ? '…' : 'Confirm reject'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              disabled={tplBusyId === s.id}
+                              onClick={() => handleApproveTemplate(s.id)}
+                              className="px-2 py-1 rounded text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 disabled:opacity-40"
+                            >
+                              {tplBusyId === s.id ? '…' : 'Approve'}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={tplBusyId === s.id}
+                              onClick={() => {
+                                setRejectingId(s.id);
+                                setRejectReasonInput('');
+                              }}
+                              className="px-2 py-1 rounded text-[10px] bg-red-500/15 text-red-300 border border-red-500/25 hover:bg-red-500/25 disabled:opacity-40"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
         {/* User Management */}
         <div className="rumi-card mb-6">
           <div className="flex items-center gap-3 mb-6">
@@ -261,8 +429,8 @@ export default function AdminPanel() {
           ) : users.length === 0 ? (
             <p className="text-gray-500 text-xs text-center py-6">No users found</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto -mx-1 px-1 rounded-lg" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <table className="w-full text-sm min-w-[560px]">
                 <thead>
                   <tr className="border-b border-rumi-border text-gray-400 text-left">
                     <th className="pb-2 pr-3 font-medium">Email</th>

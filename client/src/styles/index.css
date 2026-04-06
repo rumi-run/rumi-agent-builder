@@ -87,6 +87,21 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Keyboard focus: visible ring without cluttering mouse clicks */
+  :where(a, button, input, textarea, select, summary):focus {
+    outline: none;
+  }
+
+  :where(a, button, input, textarea, select, summary):focus-visible {
+    outline: 2px solid var(--rumi-accent);
+    outline-offset: 2px;
+  }
+
+  .rumi-input:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--rumi-shell), 0 0 0 4px var(--rumi-accent);
+  }
+
   ::selection {
     background: rgba(14, 165, 233, 0.3);
     color: var(--text-primary);
@@ -176,6 +191,23 @@
     @apply backdrop-blur-xl border rounded-xl;
     background: var(--surface-overlay);
     border-color: var(--rumi-border);
+  }
+
+  /* Horizontal scroll regions (toolbars): hide scrollbar but keep touch scroll */
+  .rumi-scroll-x {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .rumi-scroll-x::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Minimum touch target ~44px on compact toolbars (icons still readable) */
+  .rumi-touch-sm {
+    @apply min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center;
   }
 }
 
@@ -428,4 +460,28 @@ body,
 .bg-rumi-sidebar,
 .border-rumi-border {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* ========== Accessibility: reduce motion ========== */
+@media (prefers-reduced-motion: reduce) {
+  .animated-edge {
+    animation: none !important;
+  }
+
+  .animate-spin {
+    animation: none !important;
+  }
+
+  body,
+  .bg-rumi-dark,
+  .bg-rumi-shell,
+  .bg-rumi-sidebar,
+  .border-rumi-border {
+    transition-duration: 0.01ms !important;
+  }
+
+  .react-flow__handle-connecting,
+  .react-flow__handle-valid {
+    transition: none !important;
+  }
 }

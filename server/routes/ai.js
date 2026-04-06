@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../db');
 const { requireAuth } = require('../middleware');
+const { decryptApiKey } = require('../utils/aiKeyCrypto');
 
 router.use(requireAuth);
 
@@ -474,6 +475,16 @@ Hard requirements:
 
 // Generic AI API caller
 async function callAiApi(config, systemPrompt, userMessage) {
+  const apiKey = decryptApiKey(config.api_key_encrypted);
+  if (!apiKey && config.api_key_encrypted) {
+    throw new Error(
+      'AI API key could not be decrypted. Confirm RUMI_AI_CONFIG_SECRET matches the server that stored this key.'
+    );
+  }
+  if (!apiKey) {
+    throw new Error('AI API key is not configured');
+  }
+
   const provider = config.api_provider || 'apimart';
 
   // Build request based on provider
@@ -484,7 +495,7 @@ async function callAiApi(config, systemPrompt, userMessage) {
     headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'x-api-key': config.api_key_encrypted, // TODO: decrypt
+      'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
     };
     body = JSON.stringify({
@@ -502,8 +513,8 @@ async function callAiApi(config, systemPrompt, userMessage) {
     headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': `Bearer ${config.api_key_encrypted}`,
-      'x-api-key': config.api_key_encrypted,
+      'Authorization': `Bearer ${apiKey}`,
+      'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
     };
     body = JSON.stringify({
@@ -518,7 +529,7 @@ async function callAiApi(config, systemPrompt, userMessage) {
     headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': `Bearer ${config.api_key_encrypted}`,
+      'Authorization': `Bearer ${apiKey}`,
     };
     body = JSON.stringify({
       model: config.default_model || 'gpt-4',
@@ -535,7 +546,7 @@ async function callAiApi(config, systemPrompt, userMessage) {
     headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': `Bearer ${config.api_key_encrypted}`,
+      'Authorization': `Bearer ${apiKey}`,
     };
     body = JSON.stringify({
       model: config.default_model,

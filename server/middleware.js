@@ -1,5 +1,16 @@
 const authService = require('./services/authService');
 const { fetchSsoMe } = require('./services/ssoClient');
+const settings = require('./config/settings');
+
+function superAdminEmailSet() {
+  const s = settings.auth.superAdminEmails;
+  return s.length ? s : settings.auth.adminEmails;
+}
+
+function isSuperAdminEmail(email) {
+  if (!email) return false;
+  return superAdminEmailSet().includes(String(email).toLowerCase());
+}
 
 async function requireAuth(req, res, next) {
   const cookieHeader = req.headers.cookie || '';
@@ -37,4 +48,14 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireAdmin };
+function requireSuperAdmin(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (!isSuperAdminEmail(req.user.email)) {
+    return res.status(403).json({ error: 'Super admin access required' });
+  }
+  next();
+}
+
+module.exports = { requireAuth, requireAdmin, requireSuperAdmin, isSuperAdminEmail, superAdminEmailSet };

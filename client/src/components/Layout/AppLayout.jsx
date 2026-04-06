@@ -26,19 +26,22 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-rumi-dark">
+    <div className="h-screen flex flex-col bg-rumi-dark min-h-0">
       {/* Top header bar */}
-      <header className="h-12 flex items-center justify-between px-4 border-b border-rumi-border bg-rumi-shell shrink-0 z-50">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="flex items-center gap-2 text-sm font-semibold hover:opacity-80 transition-opacity">
+      <header className="min-h-12 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 sm:px-4 py-2 sm:py-0 border-b border-rumi-border bg-rumi-shell shrink-0 z-50">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-sm font-semibold hover:opacity-80 transition-opacity shrink-0 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rumi-accent"
+          >
             <span className="text-rumi-accent">RUMI</span>
-            <span className="text-gray-500">Agent Builder</span>
+            <span className="text-gray-500 hidden sm:inline">Agent Builder</span>
           </Link>
           {!isCanvas && (
-            <nav className="flex items-center gap-1 ml-4">
+            <nav className="flex items-center gap-1 ml-0 sm:ml-4 rumi-scroll-x max-w-[min(100%,70vw)] sm:max-w-none pb-0.5 sm:pb-0" aria-label="Main">
               <Link
                 to="/"
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                className={`px-3 py-2 sm:py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
                   location.pathname === '/'
                     ? 'bg-rumi-accent/10 text-rumi-accent'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
@@ -49,7 +52,7 @@ export default function AppLayout() {
               {user?.role === 'admin' && (
                 <Link
                   to="/admin"
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  className={`px-3 py-2 sm:py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
                     location.pathname === '/admin'
                       ? 'bg-rumi-accent/10 text-rumi-accent'
                       : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
@@ -59,18 +62,20 @@ export default function AppLayout() {
                 </Link>
               )}
               {location.pathname.startsWith('/org/') && (
-                <span className="text-gray-600 text-xs ml-2">Team workspace</span>
+                <span className="text-gray-600 text-xs ml-1 shrink-0 hidden sm:inline">Team workspace</span>
               )}
             </nav>
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Theme toggle */}
           <button
+            type="button"
             onClick={toggleTheme}
-            className="p-1.5 rounded-lg transition-colors hover:bg-rumi-border/50"
+            className="rumi-touch-sm p-1.5 rounded-lg transition-colors hover:bg-rumi-border/50 sm:p-1.5"
             title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
           >
             {theme === 'dark' ? (
               <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -100,8 +105,9 @@ export default function AppLayout() {
             </span>
           </div>
           <button
+            type="button"
             onClick={handleLogout}
-            className="text-gray-500 hover:text-gray-300 text-xs transition-colors"
+            className="text-gray-500 hover:text-gray-300 text-xs transition-colors py-2 px-2 sm:py-1 rounded-md min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:px-1 inline-flex items-center justify-center"
           >
             Sign out
           </button>
@@ -109,7 +115,7 @@ export default function AppLayout() {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden min-h-0 flex flex-col">
         <Outlet />
       </main>
     </div>

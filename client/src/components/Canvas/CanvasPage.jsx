@@ -57,6 +57,7 @@ export default function CanvasPage() {
     nodes,
     edges,
     buildName,
+    buildDescription,
     isDirty,
     detailPanelOpen,
     onNodesChange,
@@ -394,7 +395,7 @@ export default function CanvasPage() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 flex flex-col">
       {/* Canvas toolbar */}
       <CanvasToolbar
         buildName={buildName}
@@ -418,12 +419,12 @@ export default function CanvasPage() {
       />
 
       {/* Main canvas area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0 min-w-0">
         {/* Block palette */}
         <BlockPalette />
 
         {/* React Flow canvas */}
-        <div className="flex-1 relative" ref={reactFlowWrapper} onMouseMove={onMouseMove}>
+        <div className="flex-1 relative min-h-0 min-w-0" ref={reactFlowWrapper} onMouseMove={onMouseMove}>
           <EdgeArrowMarker />
           <ReactFlow
             nodes={nodes}
@@ -560,7 +561,14 @@ export default function CanvasPage() {
       {showExport && <ExportModal onClose={() => setShowExport(false)} />}
       {showPresentation && <PresentationMode onClose={() => setShowPresentation(false)} />}
       {showShortcuts && <KeyboardShortcuts onClose={() => setShowShortcuts(false)} />}
-      {showShare && <ShareModal buildId={id} onClose={() => setShowShare(false)} />}
+      {showShare && (
+        <ShareModal
+          buildId={id}
+          buildName={buildName}
+          buildDescription={buildDescription}
+          onClose={() => setShowShare(false)}
+        />
+      )}
     </div>
   );
 }

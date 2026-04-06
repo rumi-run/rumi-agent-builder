@@ -96,9 +96,14 @@ export default function LoginPage() {
         <div className="rumi-glass p-8">
           {step === 'email' ? (
             <form onSubmit={handleEmailSubmit}>
-              <label className="rumi-label">Email Address</label>
+              <label className="rumi-label" htmlFor="login-email">
+                Email Address
+              </label>
               <input
+                id="login-email"
                 type="email"
+                name="email"
+                autoComplete="email"
                 className="rumi-input mb-4"
                 placeholder="you@company.com"
                 value={email}
@@ -120,8 +125,9 @@ export default function LoginPage() {
           ) : (
             <div>
               <button
+                type="button"
                 onClick={handleBack}
-                className="text-gray-500 hover:text-gray-300 text-sm mb-4 flex items-center gap-1 transition-colors"
+                className="text-gray-500 hover:text-gray-300 text-sm mb-4 flex items-center gap-1 transition-colors min-h-[44px] sm:min-h-0 -ml-2 px-2 rounded-md"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -169,8 +175,10 @@ export default function LoginPage() {
                     ref={otpRefs[i]}
                     type="text"
                     inputMode="numeric"
+                    autoComplete={i === 0 ? 'one-time-code' : 'off'}
                     maxLength={1}
-                    className="w-14 h-14 text-center text-2xl font-semibold rumi-input"
+                    className="w-12 h-12 sm:w-14 sm:h-14 text-center text-xl sm:text-2xl font-semibold rumi-input"
+                    aria-label={`Verification code digit ${i + 1} of 4`}
                     value={digit}
                     onChange={(e) => handleOtpChange(i, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(i, e)}

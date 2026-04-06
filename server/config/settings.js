@@ -19,6 +19,11 @@ module.exports = {
     otpTtlMinutes: 1440,
     sessionTtlDays: 30,
     adminEmails: (process.env.RUMI_ADMIN_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),
+    /** Approves community template submissions; defaults to same as adminEmails if unset */
+    superAdminEmails: (process.env.RUMI_SUPERADMIN_EMAILS || '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
     otpLength: 4,
     otpAllowedDigits: ['1', '3', '4', '9'],
     // 仅允许在开发环境显式开启应急验证码；生产环境强制关闭
@@ -27,10 +32,12 @@ module.exports = {
       : '',
   },
 
-  // AI config stored in DB, not env
+  // AI config stored in DB, not env; encryption key for api_key column (see server/utils/aiKeyCrypto.js)
   ai: {
     defaultProvider: 'apimart',
     defaultModel: 'claude-opus-4-5',
+    /** True when RUMI_AI_CONFIG_SECRET is set (required to store keys encrypted in production) */
+    configSecretConfigured: Boolean((process.env.RUMI_AI_CONFIG_SECRET || '').trim()),
   },
 
   /** 与 rumi-unified-auth 对接（Cookie rumi_sso） */
