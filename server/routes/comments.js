@@ -43,6 +43,11 @@ async function checkBuildAccess(buildId, userId) {
   return null;
 }
 
+/** Share links with permission `view` are read-only: no create/edit/delete/resolve on comments. */
+function canMutateComments(access) {
+  return access === 'owner' || access === 'edit';
+}
+
 // List comments for a build
 router.get('/:buildId', async (req, res) => {
   try {
@@ -75,6 +80,9 @@ router.post('/:buildId', async (req, res) => {
 
     const access = await checkBuildAccess(req.params.buildId, req.user.user_id);
     if (!access) return res.status(403).json({ error: 'No access to this agent' });
+    if (!canMutateComments(access)) {
+      return res.status(403).json({ error: 'Read-only access: commenting is not allowed for this link' });
+    }
 
     const id = generateId();
     await db.runAsync(
@@ -106,6 +114,13 @@ router.put('/:commentId', async (req, res) => {
       [req.params.commentId]
     );
     if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+    const access = await checkBuildAccess(comment.build_id, req.user.user_id);
+    if (!access) return res.status(403).json({ error: 'No access to this agent' });
+    if (!canMutateComments(access)) {
+      return res.status(403).json({ error: 'Read-only access: cannot edit comments' });
+    }
+
     if (comment.user_id !== req.user.user_id) {
       return res.status(403).json({ error: 'Can only edit your own comments' });
     }
@@ -135,8 +150,9 @@ router.put('/:commentId/resolve', async (req, res) => {
     if (!comment) return res.status(404).json({ error: 'Comment not found' });
 
     const access = await checkBuildAccess(comment.build_id, req.user.user_id);
-    if (!access || access === 'view') {
-      return res.status(403).json({ error: 'No permission to resolve comments' });
+    if (!access) return res.status(403).json({ error: 'No access to this agent' });
+    if (!canMutateComments(access)) {
+      return res.status(403).json({ error: 'Read-only access: cannot resolve comments' });
     }
 
     const resolved = req.body.resolved ? 1 : 0;
@@ -160,6 +176,12 @@ router.delete('/:commentId', async (req, res) => {
       [req.params.commentId]
     );
     if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+    const access = await checkBuildAccess(comment.build_id, req.user.user_id);
+    if (!access) return res.status(403).json({ error: 'No access to this agent' });
+    if (!canMutateComments(access)) {
+      return res.status(403).json({ error: 'Read-only access: cannot delete comments' });
+    }
 
     // Owner of comment or owner of agent can delete
     if (comment.user_id !== req.user.user_id) {

@@ -16,6 +16,13 @@ const orgRoutes = require('./routes/orgs');
 const commentRoutes = require('./routes/comments');
 const communityTemplatesRoutes = require('./routes/communityTemplates');
 const setupRoutes = require('./routes/setup');
+const {
+  jsonAuth,
+  jsonSmall,
+  jsonMedium,
+  jsonAi,
+  jsonAgents,
+} = require('./middleware/jsonLimits');
 const { setupWebSocket } = require('./ws');
 const { ensureSetupTokenOnDisk } = require('./services/setupService');
 
@@ -39,19 +46,18 @@ app.use(cors({
     : ['http://localhost:5173', 'http://localhost:3020'],
   credentials: true,
 }));
-app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
-// API routes
-app.use('/api/builder/auth', authRoutes);
-app.use('/api/builder/agents', agentRoutes);
-app.use('/api/builder/admin', adminRoutes);
-app.use('/api/builder/ai', aiRoutes);
-app.use('/api/builder/sharing', sharingRoutes);
-app.use('/api/builder/orgs', orgRoutes);
-app.use('/api/builder/comments', commentRoutes);
-app.use('/api/builder/community-templates', communityTemplatesRoutes);
-app.use('/api/builder/setup', setupRoutes);
+// API routes (per-route JSON body limits; large payloads only where needed)
+app.use('/api/builder/auth', jsonAuth, authRoutes);
+app.use('/api/builder/agents', jsonAgents, agentRoutes);
+app.use('/api/builder/admin', jsonMedium, adminRoutes);
+app.use('/api/builder/ai', jsonAi, aiRoutes);
+app.use('/api/builder/sharing', jsonSmall, sharingRoutes);
+app.use('/api/builder/orgs', jsonSmall, orgRoutes);
+app.use('/api/builder/comments', jsonSmall, commentRoutes);
+app.use('/api/builder/community-templates', jsonMedium, communityTemplatesRoutes);
+app.use('/api/builder/setup', jsonSmall, setupRoutes);
 
 // Health check
 app.get('/api/builder/health', (req, res) => {
