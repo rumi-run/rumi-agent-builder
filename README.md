@@ -275,6 +275,7 @@ RUMI_ADMIN_EMAILS=admin@rumi.run,your@email.com
 ### Shipped in tree
 
 - OTP email auth and long-lived sessions
+- Admin AI API keys encrypted at rest when `RUMI_AI_CONFIG_SECRET` is set
 - Full canvas with 13 block types, undo/redo, auto-save, shortcuts
 - Export to HTML and JSON, presentation mode
 - AI drafting, validation, and block suggestions (admin-configured)
@@ -284,7 +285,6 @@ RUMI_ADMIN_EMAILS=admin@rumi.run,your@email.com
 
 ### Next up
 
-- API key encryption at rest
 - Enforced rate limits
 - Version history UI (data model exists)
 - Canvas JSON import

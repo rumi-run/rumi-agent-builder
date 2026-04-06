@@ -11,7 +11,7 @@ module.exports = {
     port: parseInt(process.env.RUMI_SMTP_PORT || '587', 10),
     user: process.env.RUMI_SMTP_USER || '',
     pass: process.env.RUMI_SMTP_PASS || '',
-    from: process.env.RUMI_EMAIL_FROM || 'noreply@beok.net',
+    from: process.env.RUMI_EMAIL_FROM || 'noreply@rumi.run',
   },
 
   // Auth
