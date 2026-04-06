@@ -137,6 +137,11 @@ function writeEnvUpdates(updates) {
   resetTransporter();
 }
 
+/** 32 bytes hex (64 chars). Used for AES-256-GCM key derivation for stored AI API keys. */
+function generateAiConfigSecret() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
 function validateSetupPayload(body) {
   const smtpHost = String(body.smtpHost || '').trim();
   const smtpUser = String(body.smtpUser || '').trim();
@@ -243,6 +248,8 @@ module.exports = {
   getExpectedToken,
   verifySetupToken,
   applySetup,
+  writeEnvUpdates,
+  generateAiConfigSecret,
   ENV_PATH,
   SETUP_TOKEN_FILE,
 };

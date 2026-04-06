@@ -19,6 +19,8 @@ export default function SetupPage() {
   const [adminEmails, setAdminEmails] = useState('');
   const [superAdminEmails, setSuperAdminEmails] = useState('');
   const [aiConfigSecret, setAiConfigSecret] = useState('');
+  const [aiConfigSecretConfigured, setAiConfigSecretConfigured] = useState(false);
+  const [aiSecretBusy, setAiSecretBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,6 +30,7 @@ export default function SetupPage() {
         if (cancelled) return;
         setNeedsSetup(!!s.needsSetup);
         setChecklist(s.checklist || []);
+        setAiConfigSecretConfigured(!!s.aiConfigSecretConfigured);
       } catch (e) {
         if (!cancelled) setError(e.message || 'Could not load setup status');
       } finally {
@@ -64,6 +67,25 @@ export default function SetupPage() {
       setError(err.message || 'Save failed');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleGenerateAiSecret = async () => {
+    const t = token.trim();
+    if (!t) {
+      setError('Enter the setup token above first.');
+      return;
+    }
+    setError('');
+    setAiSecretBusy(true);
+    try {
+      await setupApi.generateAiSecret(t);
+      const s = await setupApi.status();
+      setAiConfigSecretConfigured(!!s.aiConfigSecretConfigured);
+    } catch (err) {
+      setError(err.message || 'Could not generate encryption key');
+    } finally {
+      setAiSecretBusy(false);
     }
   };
 
@@ -259,19 +281,42 @@ export default function SetupPage() {
               />
             </div>
 
-            <div>
-              <label className="rumi-label" htmlFor="ai-secret">
-                RUMI_AI_CONFIG_SECRET (optional)
-              </label>
-              <input
-                id="ai-secret"
-                type="password"
-                className="rumi-input"
-                autoComplete="off"
-                placeholder="Long random string for encrypting admin AI API keys at rest (recommended in production)"
-                value={aiConfigSecret}
-                onChange={(e) => setAiConfigSecret(e.target.value)}
-              />
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-th-primary">AI key encryption (optional)</p>
+                  <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+                    <code className="text-gray-400">RUMI_AI_CONFIG_SECRET</code> encrypts the admin API key in the
+                    database. It is not your model provider key.
+                  </p>
+                </div>
+                {aiConfigSecretConfigured ? (
+                  <span className="text-[11px] text-emerald-400 shrink-0">Saved in .env</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleGenerateAiSecret}
+                    disabled={aiSecretBusy}
+                    className="rumi-btn-secondary text-xs px-3 py-2 min-h-[44px] sm:min-h-0 whitespace-nowrap"
+                  >
+                    {aiSecretBusy ? 'Saving…' : 'Generate and save'}
+                  </button>
+                )}
+              </div>
+              <div>
+                <label className="rumi-label" htmlFor="ai-secret">
+                  Or paste your own secret
+                </label>
+                <input
+                  id="ai-secret"
+                  type="password"
+                  className="rumi-input"
+                  autoComplete="off"
+                  placeholder="Leave empty if you used Generate, or paste a long random string"
+                  value={aiConfigSecret}
+                  onChange={(e) => setAiConfigSecret(e.target.value)}
+                />
+              </div>
             </div>
 
             {error && <p className="text-red-400 text-sm">{error}</p>}

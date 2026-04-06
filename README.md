@@ -73,7 +73,7 @@ Sign-in is **email one-time password (OTP)**. The server must send mail, and you
 |------|-----|
 | **SMTP** | Delivers OTP messages (`RUMI_SMTP_HOST`, `RUMI_SMTP_USER`, `RUMI_SMTP_PASS`, port, `RUMI_EMAIL_FROM`) |
 | **Admin emails** | Comma-separated list (`RUMI_ADMIN_EMAILS`). The first login using one of these addresses gets the **admin** role. |
-| **Optional** | `RUMI_SUPERADMIN_EMAILS` (template approvals; defaults to admin list if empty), `RUMI_AI_CONFIG_SECRET` (encrypts admin AI API keys at rest in production) |
+| **Optional** | `RUMI_SUPERADMIN_EMAILS` (template approvals; defaults to admin list if empty), `RUMI_AI_CONFIG_SECRET` (encrypts admin AI API keys at rest in production). You can paste a value or use **Generate and save** in initial setup or Admin Settings (writes `.env`, no need to copy the secret). |
 
 **Two ways to configure**
 
@@ -212,6 +212,7 @@ Base paths are mounted under `/api/builder/` in a typical deployment. Representa
 | PUT | `/ai-config` | Admin | Update AI config |
 | GET | `/users` | Admin | Users |
 | GET | `/usage` | Admin | Usage stats |
+| POST | `/generate-ai-config-secret` | Admin | Generate `RUMI_AI_CONFIG_SECRET` and write `.env` if not already set |
 
 ### Initial setup (`/api/builder/setup`)
 
@@ -221,6 +222,7 @@ Used when SMTP or `RUMI_ADMIN_EMAILS` is not yet configured. Saves to the server
 |--------|------|------|-------------|
 | GET | `/status` | No | Whether core setup is still required |
 | POST | `/apply` | Setup token (`X-Setup-Token` or `token` in JSON) | Write SMTP, admin emails, optional AI secret |
+| POST | `/generate-ai-secret` | Setup token | Generate `RUMI_AI_CONFIG_SECRET` and append to `.env` |
 
 ### WebSocket (`/ws/collab`)
 

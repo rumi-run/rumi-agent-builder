@@ -1,8 +1,11 @@
 const express = require('express');
+const settings = require('../config/settings');
 const {
   computeNeedsSetup,
   verifySetupToken,
   applySetup,
+  writeEnvUpdates,
+  generateAiConfigSecret,
 } = require('../services/setupService');
 
 const router = express.Router();
@@ -14,6 +17,7 @@ router.get('/status', (req, res) => {
       needsSetup: s.needsSetup,
       smtpConfigured: s.smtpConfigured,
       adminConfigured: s.adminConfigured,
+      aiConfigSecretConfigured: !!settings.ai.configSecretConfigured,
       checklist: s.checklist,
       setupPath: '/builder/setup',
       hint:
@@ -22,6 +26,41 @@ router.get('/status', (req, res) => {
   } catch (err) {
     console.error('[Setup] status error:', err);
     res.status(500).json({ error: 'Failed to read setup status' });
+  }
+});
+
+router.post('/generate-ai-secret', (req, res) => {
+  try {
+    const s = computeNeedsSetup();
+    if (!s.needsSetup) {
+      return res.status(403).json({
+        error:
+          'Initial setup is already complete. Use Admin Settings to generate the encryption key, or edit .env.',
+      });
+    }
+
+    const headerToken = (req.get('x-setup-token') || '').trim();
+    const bodyToken = String(req.body && req.body.token ? req.body.token : '').trim();
+    const token = headerToken || bodyToken;
+
+    if (!verifySetupToken(token)) {
+      return res.status(401).json({
+        error:
+          'Invalid or missing setup token. Use the value from server logs, data/.setup_token, or RUMI_SETUP_TOKEN in .env.',
+      });
+    }
+
+    if (settings.ai.configSecretConfigured) {
+      return res.json({ ok: true, configSecretConfigured: true, already: true });
+    }
+
+    const secret = generateAiConfigSecret();
+    writeEnvUpdates({ RUMI_AI_CONFIG_SECRET: secret });
+    console.log('[Setup] RUMI_AI_CONFIG_SECRET generated and written to .env');
+    res.json({ ok: true, configSecretConfigured: true });
+  } catch (err) {
+    console.error('[Setup] generate-ai-secret error:', err);
+    res.status(500).json({ error: 'Failed to generate encryption key' });
   }
 });
 

@@ -2,8 +2,10 @@ const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
 const { db } = require('../db');
+const settings = require('../config/settings');
 const { requireAuth, requireAdmin, requireSuperAdmin } = require('../middleware');
 const { encryptApiKeyForStorage } = require('../utils/aiKeyCrypto');
+const { writeEnvUpdates, generateAiConfigSecret } = require('../services/setupService');
 
 function generateId() {
   return crypto.randomBytes(12).toString('hex');
@@ -20,6 +22,25 @@ function slugify(name) {
 
 router.use(requireAuth);
 router.use(requireAdmin);
+
+// Generate RUMI_AI_CONFIG_SECRET and persist to .env (only when not already set)
+router.post('/generate-ai-config-secret', (req, res) => {
+  try {
+    if (settings.ai.configSecretConfigured) {
+      return res.status(409).json({
+        error:
+          'RUMI_AI_CONFIG_SECRET is already set. To replace it, edit .env manually. Rotating invalidates keys encrypted with the old secret.',
+      });
+    }
+    const secret = generateAiConfigSecret();
+    writeEnvUpdates({ RUMI_AI_CONFIG_SECRET: secret });
+    console.log('[Admin] RUMI_AI_CONFIG_SECRET generated and written to .env');
+    res.json({ ok: true, configSecretConfigured: true });
+  } catch (err) {
+    console.error('[Admin] generate-ai-config-secret error:', err);
+    res.status(500).json({ error: 'Failed to save encryption key' });
+  }
+});
 
 // Get AI config
 router.get('/ai-config', async (req, res) => {
@@ -42,6 +63,7 @@ router.get('/ai-config', async (req, res) => {
         rateLimitPerUser: config.rate_limit_per_user,
         rateLimitWindow: config.rate_limit_window,
         enabled: !!config.enabled,
+        configSecretConfigured: !!settings.ai.configSecretConfigured,
       },
     });
   } catch (err) {

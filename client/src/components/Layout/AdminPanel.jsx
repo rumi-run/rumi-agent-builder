@@ -6,6 +6,9 @@ export default function AdminPanel() {
   const { capabilities } = useAuthStore();
   const isSuperAdmin = !!capabilities?.isSuperAdmin;
   const [aiConfig, setAiConfig] = useState(null);
+  const [configSecretConfigured, setConfigSecretConfigured] = useState(false);
+  const [secretGenerating, setSecretGenerating] = useState(false);
+  const [secretError, setSecretError] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -100,12 +103,30 @@ export default function AdminPanel() {
       const data = await adminApi.getAiConfig();
       if (data.config) {
         setAiConfig(data.config);
-        setForm({ ...form, ...data.config, apiKey: data.config.apiKeySet ? '••••••••••••' : '' });
+        setConfigSecretConfigured(!!data.config.configSecretConfigured);
+        const c = { ...data.config };
+        delete c.configSecretConfigured;
+        delete c.apiKeySet;
+        setForm({ ...form, ...c, apiKey: data.config.apiKeySet ? '••••••••••••' : '' });
       }
     } catch (err) {
       console.error('Failed to load AI config:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateEncryptionSecret = async () => {
+    setSecretError('');
+    setSecretGenerating(true);
+    try {
+      await adminApi.generateAiConfigSecret();
+      setConfigSecretConfigured(true);
+    } catch (err) {
+      console.error('Generate encryption secret failed:', err);
+      setSecretError(err.message || 'Could not save encryption key');
+    } finally {
+      setSecretGenerating(false);
     }
   };
 
@@ -195,6 +216,37 @@ export default function AdminPanel() {
                 onChange={(e) => setForm({ ...form, apiEndpoint: e.target.value })}
                 placeholder="https://api.apimart.com/v1"
               />
+            </div>
+
+            <div className="rounded-lg border border-rumi-border bg-rumi-dark/40 p-4 space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-th-primary">Encryption key (RUMI_AI_CONFIG_SECRET)</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5 leading-relaxed">
+                    Encrypts the platform API key in the database. Not the model key itself. Saved to server{' '}
+                    <code className="text-gray-400">.env</code>.
+                  </p>
+                </div>
+                {configSecretConfigured ? (
+                  <span className="text-[10px] text-emerald-400 shrink-0">Configured in environment</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleGenerateEncryptionSecret}
+                    disabled={secretGenerating}
+                    className="rumi-btn-secondary text-xs px-3 py-2 min-h-[44px] sm:min-h-0 whitespace-nowrap"
+                  >
+                    {secretGenerating ? 'Saving…' : 'Generate and save'}
+                  </button>
+                )}
+              </div>
+              {!configSecretConfigured ? (
+                <p className="text-[10px] text-amber-400/90">
+                  Generate before saving an API key in production so keys are stored encrypted. If already set in{' '}
+                  <code className="text-gray-400">.env</code>, reload the page.
+                </p>
+              ) : null}
+              {secretError ? <p className="text-[10px] text-red-400">{secretError}</p> : null}
             </div>
 
             <div>

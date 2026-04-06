@@ -76,6 +76,7 @@ export const agentApi = {
 export const adminApi = {
   getAiConfig: () => request('/admin/ai-config'),
   updateAiConfig: (data) => request('/admin/ai-config', { method: 'PUT', body: data }),
+  generateAiConfigSecret: () => request('/admin/generate-ai-config-secret', { method: 'POST' }),
   getUsers: ({ page = 1, limit = 20, search = '' } = {}) => {
     const params = new URLSearchParams({ page, limit });
     if (search) params.set('search', search);
@@ -144,6 +145,12 @@ export const setupApi = {
     request('/setup/apply', {
       method: 'POST',
       body,
+      headers: setupToken ? { 'X-Setup-Token': setupToken } : {},
+    }),
+  generateAiSecret: (setupToken) =>
+    request('/setup/generate-ai-secret', {
+      method: 'POST',
+      body: { token: setupToken },
       headers: setupToken ? { 'X-Setup-Token': setupToken } : {},
     }),
 };
