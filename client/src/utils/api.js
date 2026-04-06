@@ -1,9 +1,9 @@
 const API_BASE = '/api/builder';
 
-/** Self-hosted: `/api/builder/auth`. Hosted RUMI stack: set `VITE_AUTH_API_BASE=/api/rumi-auth` at build time. */
+/** Default: this app's `/api/builder/auth`. Set `VITE_AUTH_API_BASE` to your reverse-proxy path if login is served by another service (e.g. `/api/auth-bridge`). */
 const AUTH_API_BASE = import.meta.env.VITE_AUTH_API_BASE || '/api/builder/auth';
 
-/** Builder auth or unified auth (rumi-unified-auth via Nginx /api/rumi-auth/) */
+/** Email OTP against AUTH_API_BASE; must match server session cookies. */
 async function authRequest(path, options = {}) {
   const { method = 'GET', body, headers = {} } = options;
   const config = {
@@ -133,7 +133,7 @@ export const commentApi = {
   delete: (commentId) => request(`/comments/${commentId}`, { method: 'DELETE' }),
 };
 
-// Builder session capabilities (same cookie as agent API; complements rumi-auth /me)
+// Builder session capabilities (same session as /api/builder/auth)
 export const builderAuthApi = {
   capabilities: () => request('/auth/capabilities'),
 };

@@ -39,7 +39,7 @@ In short: **clarity before code, alignment before scale,** and a path from white
 | **Real-time collaboration** | WebSocket presence, cursors, synced edits, comments pinned to blocks |
 | **Access & teams** | Email OTP sessions, share links (view/edit), organizations and invites |
 | **Export & review** | HTML and JSON export, presentation mode for structured walkthroughs |
-| **Operations** | Node.js API, SQLite persistence, health check, optional SSO alignment via host configuration |
+| **Operations** | Node.js API, SQLite persistence, health check, optional **external auth bridge** (same-site cookie + internal `/me`) if you configure it |
 | **Administration** | AI settings, user directory, usage visibility, optional community template review (super admin) |
 | **Self-hosted onboarding** | Guided setup at `/builder/setup` for SMTP, admin emails, and optional encryption secrets (persists to `.env`) |
 
@@ -51,7 +51,7 @@ In short: **clarity before code, alignment before scale,** and a path from white
 |-------|--------|
 | **Client** | React, Vite, Tailwind, React Flow-style canvas, Zustand |
 | **Server** | Node.js, Express, SQLite (schema + migrations), WebSocket collaboration |
-| **Auth** | Cookie sessions with email OTP. Use **builder-local** auth (`/api/builder/auth`) or, on the hosted RUMI stack, build with `VITE_AUTH_API_BASE=/api/rumi-auth` for unified auth behind your reverse proxy. |
+| **Auth** | **Default:** email OTP via this app (`/api/builder/auth`). **Optional:** point `VITE_AUTH_API_BASE` at a separate login API behind your reverse proxy, and set server **auth bridge** env vars so sessions from that service are recognized (see below). |
 
 See **Repository layout** for paths and modules.
 
@@ -110,14 +110,31 @@ Sign-in uses **email one-time codes (OTP)**. The server must send mail, and you 
 1. Edit `.env` and start the server, or follow [Deployment](#deployment).
 2. If SMTP or admin emails are missing, open **`/builder/setup`**. On first boot the server emits a **setup token** (or set `RUMI_SETUP_TOKEN` / read `data/.setup_token`). The wizard merges values into `.env` and reloads settings in the running process.
 
-**Client auth base URL**
+**Where the browser sends login requests (`VITE_AUTH_API_BASE`)**
 
 | Scenario | Build-time variable | Typical value |
 |----------|---------------------|---------------|
-| Standalone (this repo + Express) | *(default)* | `/api/builder/auth` |
-| Hosted RUMI unified auth | `VITE_AUTH_API_BASE` | `/api/rumi-auth` |
+| Default (this app handles OTP) | *(omit)* | `/api/builder/auth` |
+| Login served by another service on the same site | `VITE_AUTH_API_BASE` | Your nginx path to that service (example: `/api/auth-bridge`) |
 
-Production builds for rumi.run use the deploy flow in [`rumi_run_home`](https://github.com/rumi-run/rumi_run_home) (`scripts/deploy_rumi_agent_builder.sh`), which sets `VITE_AUTH_API_BASE=/api/rumi-auth`.
+If you use a separate login service, configure the **server** bridge (next section) and proxy both that service and `/api/builder/` to the right processes. The reference deploy in [`rumi_run_home`](https://github.com/rumi-run/rumi_run_home) uses `/api/auth-bridge` for the optional shared login stack.
+
+---
+
+## Optional external auth bridge (advanced)
+
+**By default this is off.** Self-hosted installs normally rely only on **email OTP** from this repository.
+
+Some deployments run a **separate** auth service on the same domain (cookie shared with the builder origin). The builder can then:
+
+1. **Browser:** send sign-in requests to that service by setting `VITE_AUTH_API_BASE` to your reverse-proxy path (for example `/api/auth-bridge`).
+2. **Server:** if you set **`BUILDER_AUTH_BRIDGE_INTERNAL_URL`** (internal base URL for that service, used only server-side) and **`BUILDER_AUTH_BRIDGE_COOKIE_NAME`** (session cookie name), the API and WebSocket layers will call `GET {internalUrl}/me` with the incoming `Cookie` header and map the returned user into the local SQLite user table.
+
+If either bridge variable is empty, **no** call is made and only **`rumi_session`** (this app’s OTP session) is used.
+
+**Deprecated but still read:** `RUMI_SSO_INTERNAL_URL`, `RUMI_SSO_COOKIE_NAME` (same meaning as the `BUILDER_AUTH_BRIDGE_*` variables).
+
+If you upgraded from an older release that relied on **implicit** defaults for the bridge, set these two variables explicitly in the server `.env` (they are no longer hard-coded in the application).
 
 ---
 
@@ -133,7 +150,8 @@ Copy [`.env.example`](./.env.example) to `.env` and adjust.
 | `RUMI_ADMIN_EMAILS`, `RUMI_SUPERADMIN_EMAILS` | Admin and super-admin email lists |
 | `RUMI_AI_CONFIG_SECRET` | Key derivation for encrypting **stored** admin AI API keys |
 | `RUMI_SETUP_TOKEN` | Optional fixed token for `/builder/setup` instead of `data/.setup_token` |
-| `RUMI_SSO_INTERNAL_URL`, `RUMI_SSO_COOKIE_NAME` | Optional hooks for rumi-unified-auth in combined deployments |
+| `BUILDER_AUTH_BRIDGE_INTERNAL_URL`, `BUILDER_AUTH_BRIDGE_COOKIE_NAME` | Optional external auth bridge (see section above). Empty = disabled. |
+| `RUMI_SSO_INTERNAL_URL`, `RUMI_SSO_COOKIE_NAME` | Deprecated aliases for the same bridge |
 
 ---
 
@@ -390,7 +408,7 @@ RUMI_ADMIN_EMAILS=admin@rumi.run,your@email.com
 
 Issues and pull requests are welcome. Do not commit secrets: use `.env` locally.
 
-Changes that touch the hosted RUMI stack (deploy scripts, SSO) should be coordinated with [`rumi_run_home`](https://github.com/rumi-run/rumi_run_home).
+Changes that touch the hosted deploy stack (scripts, nginx, optional shared auth) should be coordinated with [`rumi_run_home`](https://github.com/rumi-run/rumi_run_home).
 
 ---
 

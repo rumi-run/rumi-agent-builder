@@ -140,29 +140,28 @@ async function updateUserProfile(userId, data) {
 }
 
 /**
- * 将统一登录用户落到本地 rumi_users（按邮箱对齐；已存在则沿用本地 id，保证 agent_builds 等外键稳定）
- * 返回形状与 getSession() 一致，供 req.user 使用
+ * Map a user from an optional external auth bridge (/me) onto local rumi_users by email.
+ * Preserves existing user id when the row already exists (stable FKs). Shape matches getSession() for req.user.
  */
-async function ensureLocalUserFromSso(ssoUser) {
-  if (!ssoUser || !ssoUser.email) return null;
-  const email = String(ssoUser.email).toLowerCase().trim();
+async function ensureLocalUserFromExternalAuth(remoteUser) {
+  if (!remoteUser || !remoteUser.email) return null;
+  const email = String(remoteUser.email).toLowerCase().trim();
   const isConfiguredAdmin =
     settings.auth.adminEmails.includes(email) || settings.auth.superAdminEmails.includes(email);
-  // 本地 admin 白名单优先，避免 SSO 角色同步延迟导致管理入口消失
-  const effectiveRole = isConfiguredAdmin ? 'admin' : (ssoUser.role || 'user');
+  const effectiveRole = isConfiguredAdmin ? 'admin' : (remoteUser.role || 'user');
 
   let local = await db.getAsync(`SELECT * FROM rumi_users WHERE email = ?`, [email]);
 
   if (local) {
     const patches = [];
     const vals = [];
-    if (ssoUser.name != null && String(ssoUser.name) !== String(local.name || '')) {
+    if (remoteUser.name != null && String(remoteUser.name) !== String(local.name || '')) {
       patches.push('name = ?');
-      vals.push(ssoUser.name);
+      vals.push(remoteUser.name);
     }
-    if (ssoUser.org != null && String(ssoUser.org) !== String(local.org || '')) {
+    if (remoteUser.org != null && String(remoteUser.org) !== String(local.org || '')) {
       patches.push('org = ?');
-      vals.push(ssoUser.org);
+      vals.push(remoteUser.org);
     }
     if (effectiveRole && effectiveRole !== local.role) {
       patches.push('role = ?');
@@ -177,10 +176,10 @@ async function ensureLocalUserFromSso(ssoUser) {
       local = await db.getAsync(`SELECT * FROM rumi_users WHERE id = ?`, [local.id]);
     }
   } else {
-    const id = ssoUser.id || generateUserId();
+    const id = remoteUser.id || generateUserId();
     await db.runAsync(
       `INSERT INTO rumi_users (id, email, name, org, role) VALUES (?, ?, ?, ?, ?)`,
-      [id, email, ssoUser.name || '', ssoUser.org || '', effectiveRole]
+      [id, email, remoteUser.name || '', remoteUser.org || '', effectiveRole]
     );
     local = await db.getAsync(`SELECT * FROM rumi_users WHERE id = ?`, [id]);
   }
@@ -203,5 +202,5 @@ module.exports = {
   getSession,
   deleteSession,
   updateUserProfile,
-  ensureLocalUserFromSso,
+  ensureLocalUserFromExternalAuth,
 };

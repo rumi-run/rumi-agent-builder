@@ -10,6 +10,11 @@ export default defineConfig({
         target: 'http://localhost:3020',
         changeOrigin: true,
       },
+      '/api/auth-bridge': {
+        target: 'http://localhost:3030',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/auth-bridge/, '') || '/',
+      },
       '/api/rumi-auth': {
         target: 'http://localhost:3030',
         changeOrigin: true,

@@ -37,9 +37,18 @@ function buildSettings() {
       configSecretConfigured: Boolean((process.env.RUMI_AI_CONFIG_SECRET || '').trim()),
     },
 
-    sso: {
-      internalUrl: process.env.RUMI_SSO_INTERNAL_URL || 'http://127.0.0.1:3030',
-      cookieName: process.env.RUMI_SSO_COOKIE_NAME || 'rumi_sso',
+    /** Optional: same-site cookie from another auth service; server calls internalUrl + /me. Empty = disabled. */
+    authBridge: {
+      internalUrl: (
+        process.env.BUILDER_AUTH_BRIDGE_INTERNAL_URL ||
+        process.env.RUMI_SSO_INTERNAL_URL ||
+        ''
+      ).trim(),
+      cookieName: (
+        process.env.BUILDER_AUTH_BRIDGE_COOKIE_NAME ||
+        process.env.RUMI_SSO_COOKIE_NAME ||
+        ''
+      ).trim(),
     },
   };
 }
@@ -54,7 +63,7 @@ function reloadSettingsFromEnv() {
   settings.smtp = next.smtp;
   settings.auth = next.auth;
   settings.ai = next.ai;
-  settings.sso = next.sso;
+  settings.authBridge = next.authBridge;
 }
 
 module.exports = settings;

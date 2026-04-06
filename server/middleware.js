@@ -1,5 +1,5 @@
 const authService = require('./services/authService');
-const { fetchSsoMe } = require('./services/ssoClient');
+const { fetchBridgedUser } = require('./services/externalAuthBridge');
 const settings = require('./config/settings');
 
 function superAdminEmailSet() {
@@ -15,9 +15,9 @@ function isSuperAdminEmail(email) {
 async function requireAuth(req, res, next) {
   const cookieHeader = req.headers.cookie || '';
 
-  const ssoUser = await fetchSsoMe(cookieHeader);
-  if (ssoUser) {
-    const local = await authService.ensureLocalUserFromSso(ssoUser);
+  const bridged = await fetchBridgedUser(cookieHeader);
+  if (bridged) {
+    const local = await authService.ensureLocalUserFromExternalAuth(bridged);
     if (local) {
       req.user = local;
       return next();

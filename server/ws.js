@@ -1,7 +1,7 @@
 const { WebSocketServer } = require('ws');
 const { db } = require('./db');
 const authService = require('./services/authService');
-const { fetchSsoMe } = require('./services/ssoClient');
+const { fetchBridgedUser } = require('./services/externalAuthBridge');
 
 // Active connections: Map<buildId, Set<{ws, userId, userName, userEmail}>>
 const rooms = new Map();
@@ -16,9 +16,9 @@ function setupWebSocket(server) {
     const cookies = parseCookies(cookieHeader);
 
     let session = null;
-    const ssoUser = await fetchSsoMe(cookieHeader);
-    if (ssoUser) {
-      session = await authService.ensureLocalUserFromSso(ssoUser);
+    const bridged = await fetchBridgedUser(cookieHeader);
+    if (bridged) {
+      session = await authService.ensureLocalUserFromExternalAuth(bridged);
     }
     if (!session) {
       const sessionId = cookies.rumi_session;

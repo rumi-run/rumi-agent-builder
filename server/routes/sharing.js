@@ -4,7 +4,7 @@ const router = express.Router();
 const { db } = require('../db');
 const { requireAuth } = require('../middleware');
 const authService = require('../services/authService');
-const { fetchSsoMe } = require('../services/ssoClient');
+const { fetchBridgedUser } = require('../services/externalAuthBridge');
 
 function generateId() {
   return crypto.randomBytes(8).toString('hex');
@@ -16,9 +16,9 @@ function generateToken() {
 
 async function getOptionalAuthUser(req) {
   const cookieHeader = req.headers.cookie || '';
-  const ssoUser = await fetchSsoMe(cookieHeader);
-  if (ssoUser) {
-    const local = await authService.ensureLocalUserFromSso(ssoUser);
+  const bridged = await fetchBridgedUser(cookieHeader);
+  if (bridged) {
+    const local = await authService.ensureLocalUserFromExternalAuth(bridged);
     if (local) return local;
   }
 
