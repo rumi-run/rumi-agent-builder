@@ -1,0 +1,426 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========== Theme CSS Variables ========== */
+:root {
+  /* Dark theme (default) */
+  --rumi-dark: #0a0e1a;
+  --rumi-shell: #111827;
+  --rumi-sidebar: #1a1f2e;
+  --rumi-border: #2a3041;
+  --rumi-accent: #0ea5e9;
+  --rumi-accent-hover: #38bdf8;
+  --rumi-canvas: #f8fafc;
+
+  /* Semantic text colors */
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  --text-faint: #6b7280;
+
+  /* Surfaces */
+  --surface-overlay: rgba(255, 255, 255, 0.05);
+  --surface-overlay-hover: rgba(255, 255, 255, 0.1);
+
+  /* Scrollbar */
+  --scrollbar-thumb: #2a3041;
+  --scrollbar-thumb-hover: #3a4051;
+
+  /* Inputs */
+  --input-bg: #0a0e1a;
+  --input-text: #e5e7eb;
+  --input-placeholder: #6b7280;
+}
+
+/* Light theme */
+:root.light {
+  --rumi-dark: #f8fafc;
+  --rumi-shell: #ffffff;
+  --rumi-sidebar: #f1f5f9;
+  --rumi-border: #e2e8f0;
+  --rumi-accent: #0284c7;
+  --rumi-accent-hover: #0369a1;
+  --rumi-canvas: #f8fafc;
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+
+  --surface-overlay: rgba(0, 0, 0, 0.04);
+  --surface-overlay-hover: rgba(0, 0, 0, 0.08);
+
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
+
+  --input-bg: #ffffff;
+  --input-text: #1e293b;
+  --input-placeholder: #94a3b8;
+}
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--rumi-dark);
+    color: var(--text-primary);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: rgba(14, 165, 233, 0.3);
+    color: var(--text-primary);
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
+@layer components {
+  .rumi-btn {
+    @apply px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 cursor-pointer
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .rumi-btn-primary {
+    @apply rumi-btn bg-rumi-accent text-white hover:bg-rumi-accent-hover shadow-lg;
+  }
+
+  .rumi-btn-secondary {
+    @apply rumi-btn bg-rumi-sidebar border border-rumi-border
+           hover:bg-rumi-border;
+    color: var(--text-secondary);
+  }
+
+  .rumi-btn-secondary:hover {
+    color: var(--text-primary);
+  }
+
+  .rumi-btn-ghost {
+    @apply rumi-btn bg-transparent;
+    color: var(--text-muted);
+  }
+
+  .rumi-btn-ghost:hover {
+    color: var(--text-primary);
+    background: var(--surface-overlay);
+  }
+
+  .rumi-btn-danger {
+    @apply rumi-btn bg-red-500/10 text-red-400 border border-red-500/20
+           hover:bg-red-500/20 hover:text-red-300;
+  }
+
+  .rumi-input {
+    @apply w-full px-3 py-2.5 border border-rumi-border rounded-lg text-sm
+           focus:outline-none focus:border-rumi-accent focus:ring-1
+           transition-all duration-200;
+    background: var(--input-bg);
+    color: var(--input-text);
+  }
+
+  .rumi-input::placeholder {
+    color: var(--input-placeholder);
+  }
+
+  .rumi-textarea {
+    @apply rumi-input resize-none;
+  }
+
+  .rumi-label {
+    @apply block text-xs font-medium uppercase tracking-wider mb-1.5;
+    color: var(--text-muted);
+  }
+
+  .rumi-card {
+    @apply bg-rumi-sidebar border border-rumi-border rounded-xl p-5
+           transition-all duration-200 hover:border-rumi-accent;
+  }
+
+  .rumi-glass {
+    @apply backdrop-blur-xl border rounded-xl;
+    background: var(--surface-overlay);
+    border-color: var(--rumi-border);
+  }
+}
+
+/* ========== Light mode text color overrides ========== */
+/* In light mode, gray-* text classes need to become darker for readability */
+:root.light .text-gray-100 { color: #0f172a !important; }
+:root.light .text-gray-200 { color: #1e293b !important; }
+:root.light .text-gray-300 { color: #334155 !important; }
+:root.light .text-gray-400 { color: #475569 !important; }
+:root.light .text-gray-500 { color: #64748b !important; }
+:root.light .text-gray-600 { color: #475569 !important; }
+:root.light .text-gray-700 { color: #334155 !important; }
+
+/* Light mode background overrides for semi-transparent whites */
+:root.light .bg-white\/5 { background: rgba(0, 0, 0, 0.04) !important; }
+:root.light .bg-white\/10 { background: rgba(0, 0, 0, 0.06) !important; }
+:root.light .hover\:bg-white\/5:hover { background: rgba(0, 0, 0, 0.06) !important; }
+:root.light .hover\:bg-white\/10:hover { background: rgba(0, 0, 0, 0.08) !important; }
+:root.light .hover\:bg-white\/\[0\.02\]:hover { background: rgba(0, 0, 0, 0.03) !important; }
+
+/* Light mode text hover overrides */
+:root.light .hover\:text-white:hover { color: #0f172a !important; }
+:root.light .hover\:text-gray-200:hover { color: #1e293b !important; }
+:root.light .hover\:text-gray-300:hover { color: #334155 !important; }
+
+/* Light mode placeholder colors */
+:root.light .placeholder-gray-500::placeholder { color: #94a3b8 !important; }
+
+/* Light mode badge/status overrides */
+:root.light .bg-gray-500\/10 { background: rgba(100, 116, 139, 0.12) !important; }
+:root.light .bg-gray-500\/20 { background: rgba(100, 116, 139, 0.15) !important; }
+:root.light .bg-gray-600\/20 { background: rgba(71, 85, 105, 0.12) !important; }
+
+/* ========== Dark mode contrast improvements ========== */
+/* text-gray-600 is too faint on dark backgrounds — bump to readable level */
+:root:not(.light) .text-gray-600 { color: #9ca3af !important; }
+:root:not(.light) .text-gray-700 { color: #6b7280 !important; }
+
+/* ========== React Flow overrides ========== */
+.react-flow {
+  background: var(--rumi-canvas) !important;
+}
+
+.react-flow__background {
+  background: var(--rumi-canvas) !important;
+}
+
+.react-flow__minimap {
+  background: var(--rumi-sidebar) !important;
+  border: 1px solid var(--rumi-border) !important;
+  border-radius: 8px !important;
+}
+
+.react-flow__controls {
+  background: var(--rumi-sidebar) !important;
+  border: 1px solid var(--rumi-border) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.react-flow__controls-button {
+  background: var(--rumi-sidebar) !important;
+  border-bottom: 1px solid var(--rumi-border) !important;
+  fill: var(--text-muted) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--rumi-border) !important;
+  fill: var(--text-primary) !important;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.react-flow__connection-line {
+  stroke: #0ea5e9;
+  stroke-width: 2;
+}
+
+/* Make edge endpoint drag handles easier to grab, especially in dense graphs */
+.react-flow__edgeupdater {
+  cursor: grab;
+  r: 6px;
+  fill: rgba(14, 165, 233, 0.22);
+  stroke: rgba(14, 165, 233, 0.55);
+  stroke-width: 4px;
+  transition: r 0.12s ease, fill 0.12s ease, stroke 0.12s ease;
+}
+
+.react-flow__edgeupdater:hover {
+  r: 7px;
+  fill: rgba(14, 165, 233, 0.32);
+  stroke: rgba(14, 165, 233, 0.72);
+}
+
+.react-flow__edgeupdater:active {
+  cursor: grabbing;
+}
+
+/* ========== Block node styles ========== */
+.agent-block {
+  min-width: 220px;
+  max-width: 320px;
+  border-radius: 12px;
+  border: 2px solid;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s, transform 0.2s;
+  cursor: grab;
+}
+
+.agent-block:active {
+  cursor: grabbing;
+}
+
+.agent-block:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.agent-block.selected {
+  box-shadow: 0 0 0 2px #0ea5e9, 0 4px 12px rgba(14, 165, 233, 0.2);
+}
+
+.agent-block .block-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.agent-block .block-description {
+  padding: 4px 14px 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.agent-block .block-body {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.agent-block .block-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agent-block .config-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.agent-block .config-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  min-width: 48px;
+}
+
+.agent-block .config-value {
+  font-size: 13px;
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-block .config-text {
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.agent-block .block-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* Show all handles when user is drawing a connection */
+.react-flow.connecting .react-flow__handle {
+  opacity: 1 !important;
+}
+
+/* Strong visual feedback while dragging a connection line */
+.react-flow__handle-connecting,
+.react-flow__handle-valid {
+  opacity: 1 !important;
+  transform: scale(1.15);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+}
+
+/* Valid snap target highlight */
+.react-flow__handle-valid {
+  background-color: #0ea5e9 !important;
+  box-shadow:
+    0 0 0 4px rgba(14, 165, 233, 0.22),
+    0 0 14px rgba(14, 165, 233, 0.75);
+}
+
+/* Hide handles completely in presentation mode */
+.presentation-mode .react-flow__handle {
+  /* Keep handles in layout so edge anchors can still be computed reliably. */
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Animated connection line for agent-to-agent */
+.animated-edge {
+  stroke-dasharray: 8;
+  animation: dash 0.5s linear infinite;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+/* Drag overlay */
+.drag-overlay {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.8;
+  transform: translate(-50%, -50%);
+}
+
+/* ========== Theme transition ========== */
+body,
+.bg-rumi-dark,
+.bg-rumi-shell,
+.bg-rumi-sidebar,
+.border-rumi-border {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
