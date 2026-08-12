@@ -16,6 +16,15 @@ function parseAdminList(str) {
     .filter(Boolean);
 }
 
+function isValidAdminEmail(email) {
+  const value = String(email || '');
+  if (!value || value.length > 254 || /[\s\0]/.test(value)) return false;
+  const at = value.indexOf('@');
+  if (at < 1 || at !== value.lastIndexOf('@')) return false;
+  const dot = value.lastIndexOf('.');
+  return dot > at + 1 && dot < value.length - 1;
+}
+
 function computeNeedsSetup() {
   const host = (process.env.RUMI_SMTP_HOST || '').trim();
   const user = (process.env.RUMI_SMTP_USER || '').trim();
@@ -196,8 +205,7 @@ function validateSetupPayload(body) {
     errors.push('Setup values must not contain control characters or newlines.');
   }
 
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if ([...adminEmails, ...superAdminEmails].some((email) => !emailPattern.test(email))) {
+  if ([...adminEmails, ...superAdminEmails].some((email) => !isValidAdminEmail(email))) {
     errors.push('Admin email lists contain an invalid address.');
   }
 
@@ -322,6 +330,7 @@ module.exports = {
   generateAiConfigSecret,
   validateSetupPayload,
   escapeEnvValue,
+  isValidAdminEmail,
   ENV_PATH,
   SETUP_TOKEN_FILE,
 };

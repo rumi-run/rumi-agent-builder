@@ -148,6 +148,7 @@ Copy [`.env.example`](./.env.example) to `.env` and adjust.
 |----------|---------|
 | `BUILDER_PORT`, `BUILDER_HOST`, `BUILDER_DB_PATH` | HTTP bind address and SQLite file path |
 | `BUILDER_TRUST_PROXY` | Set `1` behind a reverse proxy so rate limits and `req.ip` use the real client |
+| `BUILDER_ALLOWED_ORIGINS` | Additional comma-separated browser origins permitted for CORS and state-changing API requests |
 | `NODE_ENV` | `production` enables stricter cookie and AI key handling |
 | `RUMI_SMTP_*`, `RUMI_EMAIL_FROM` | Outbound mail for OTP |
 | `RUMI_ADMIN_EMAILS`, `RUMI_SUPERADMIN_EMAILS` | Admin and super-admin email lists |
@@ -374,8 +375,9 @@ Connect with `?buildId=<id>`. Cookie session required.
 ### Security notes (production)
 
 - Set **`BUILDER_TRUST_PROXY=1`** in `.env` when Node runs behind a reverse proxy so **`X-Forwarded-For`** is honored for OTP **rate limits** and logging.
+- Set **`BUILDER_ALLOWED_ORIGINS`** for any self-hosted browser origin other than the documented defaults. Cookie-authenticated write requests without an allowed `Origin` are rejected; bearer-token and setup-token clients do not rely on ambient cookies.
 - OTP **request** and **verify** routes use per-IP limits (see `server/middleware/rateLimiters.js`). Adjust windows if your traffic pattern requires it.
-- **`helmet`** is enabled with CSP disabled for SPA compatibility; add stricter headers at the proxy if you need them.
+- **`helmet`** enforces an explicit CSP for the SPA, Google Fonts, same-origin APIs, and WebSocket collaboration.
 - The optional **external auth bridge** does not grant `admin` from the remote `/me` body. Only addresses in **`RUMI_ADMIN_EMAILS`** / **`RUMI_SUPERADMIN_EMAILS`** receive admin.
 
 ### Nginx (example)

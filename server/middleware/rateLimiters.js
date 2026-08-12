@@ -1,5 +1,14 @@
 const rateLimit = require('express-rate-limit');
 
+/** General abuse ceiling for every Builder API endpoint. Route-specific limits may be stricter. */
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many API requests from this address. Wait and try again.' },
+});
+
 /** Limit OTP request spam (per IP). */
 const otpRequestLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -18,4 +27,4 @@ const otpVerifyLimiter = rateLimit({
   message: { error: 'Too many verification attempts. Wait and try again.' },
 });
 
-module.exports = { otpRequestLimiter, otpVerifyLimiter };
+module.exports = { apiLimiter, otpRequestLimiter, otpVerifyLimiter };
