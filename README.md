@@ -423,6 +423,17 @@ Issues and pull requests are welcome. Do not commit secrets: use `.env` locally.
 
 Changes that touch the hosted deploy stack (scripts, nginx, optional shared auth) should be coordinated with [`rumi_run_home`](https://github.com/rumi-run/rumi_run_home).
 
+Before opening a pull request, run:
+
+```bash
+npm ci
+npm ci --prefix client
+npm run check
+npm run audit:security
+```
+
+`@141319co` is the current code owner and core maintainer. Security vulnerabilities should be reported privately under the process in [`SECURITY.md`](./SECURITY.md), not in public issues.
+
 ---
 
 ## License
