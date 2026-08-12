@@ -25,6 +25,8 @@ const {
 } = require('./middleware/jsonLimits');
 const { setupWebSocket } = require('./ws');
 const { ensureSetupTokenOnDisk } = require('./services/setupService');
+const { apiLimiter } = require('./middleware/rateLimiters');
+const { getAllowedOrigins, requireTrustedOrigin } = require('./security');
 
 const app = express();
 
@@ -34,19 +36,33 @@ if (process.env.BUILDER_TRUST_PROXY === '1') {
 
 app.use(
   helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: {
+        defaultSrc: ["'self'"],
+        baseUri: ["'self'"],
+        connectSrc: ["'self'", 'ws:', 'wss:'],
+        fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+        formAction: ["'self'"],
+        frameAncestors: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        objectSrc: ["'none'"],
+        scriptSrc: ["'self'"],
+        scriptSrcAttr: ["'none'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      },
+    },
     crossOriginEmbedderPolicy: false,
   })
 );
 
 // Middleware
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://rumi.run']
-    : ['http://localhost:5173', 'http://localhost:3020'],
+  origin: getAllowedOrigins(),
   credentials: true,
 }));
 app.use(cookieParser());
+app.use('/api/builder', apiLimiter, requireTrustedOrigin);
 
 // API routes (per-route JSON body limits; large payloads only where needed)
 app.use('/api/builder/auth', jsonAuth, authRoutes);

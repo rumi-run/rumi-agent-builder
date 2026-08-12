@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
   escapeEnvValue,
+  isValidAdminEmail,
   validateSetupPayload,
 } = require('../server/services/setupService');
 
@@ -25,6 +26,13 @@ test('validateSetupPayload accepts a normal self-hosted configuration', () => {
   const result = validateSetupPayload(validSetup());
   assert.equal(result.ok, true);
   assert.deepEqual(result.errors, []);
+});
+
+test('isValidAdminEmail uses bounded structural checks', () => {
+  assert.equal(isValidAdminEmail('admin@example.com'), true);
+  assert.equal(isValidAdminEmail('missing-domain@example'), false);
+  assert.equal(isValidAdminEmail('two@@example.com'), false);
+  assert.equal(isValidAdminEmail(`${'a'.repeat(245)}@example.com`), false);
 });
 
 test('validateSetupPayload rejects newline injection in persisted environment values', () => {
