@@ -189,6 +189,21 @@ function validateSetupPayload(body) {
   if (!smtpHost) errors.push('SMTP host is required.');
   if (!smtpUser) errors.push('SMTP user is required.');
   if (!adminEmails.length) errors.push('At least one admin email is required.');
+  if (smtpPort < 1 || smtpPort > 65535) errors.push('SMTP port must be between 1 and 65535.');
+
+  const singleLineFields = [smtpHost, smtpUser, smtpPass, emailFrom, aiConfigSecret];
+  if (singleLineFields.some((value) => /[\0\r\n]/.test(value))) {
+    errors.push('Setup values must not contain control characters or newlines.');
+  }
+
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if ([...adminEmails, ...superAdminEmails].some((email) => !emailPattern.test(email))) {
+    errors.push('Admin email lists contain an invalid address.');
+  }
+
+  if (aiConfigSecret && aiConfigSecret.length < 32) {
+    errors.push('AI config secret must be at least 32 characters.');
+  }
 
   let dbPath = dbPathRaw || './data/builder.db';
   if (dbPath.length > 512 || /[\r\n]/.test(dbPath)) {
@@ -305,6 +320,8 @@ module.exports = {
   applySetup,
   writeEnvUpdates,
   generateAiConfigSecret,
+  validateSetupPayload,
+  escapeEnvValue,
   ENV_PATH,
   SETUP_TOKEN_FILE,
 };
